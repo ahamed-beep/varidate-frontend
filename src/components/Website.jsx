@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
-import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react'
+import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react';
 import { Search, X } from "lucide-react";
-import { Link } from 'react-router-dom';
+import { Link, Links } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { getallimages } from '../Redux/Slider';
 import { useRef } from 'react';
@@ -121,12 +121,16 @@ function Website() {
   <div className='flex p-1'>
     {/* Store Location */}
     <div className='flex items-center'>
+  
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6 w-4">
         <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
         <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z" />
       </svg>
+      <Link to="/add" >
       <p className='text-xs pr-3 py-1 pl-1 text-medium'>Store Location</p>
+      </Link>
       <p className='pl-2 mr-3 text-gray-200'>|</p>
+     
     </div>
 
     {/* Sign In or Register */}
@@ -254,11 +258,13 @@ function Website() {
       </div>
       
       <div className='flex items-center sm:block md:hidden'>
-      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6 w-4">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
-      </svg>
       <Link to="/form" className="text-xs pr-3 py-1 pl-1">
-        <p className='' >Sign in or Register</p>
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="size-6 md:w-4 w-7">
+  <path fillRule="evenodd" d="M7.5 6a4.5 4.5 0 1 1 9 0 4.5 4.5 0 0 1-9 0ZM3.751 20.105a8.25 8.25 0 0 1 16.498 0 .75.75 0 0 1-.437.695A18.683 18.683 0 0 1 12 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 0 1-.437-.695Z" clipRule="evenodd" />
+</svg>
+
+      
+        <p className=' hidden md:block' >Sign in or Register</p>
       </Link>
     </div>
       {/* Cart Icon */}

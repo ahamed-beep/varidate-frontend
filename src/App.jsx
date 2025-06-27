@@ -3,6 +3,7 @@ import { Routes, Route } from "react-router-dom";
 import Website from "./components/Website";
 import Form from "./components/Form";
 import Newaccount from "./components/Newaccount";
+import Addproduct from "./components/Addproduct";
 
 function App() {
   return (
@@ -11,7 +12,7 @@ function App() {
 
       <Route path="/" element={<Website />} />
 
-    
+      <Route path="/add" element={<Addproduct />} />
       <Route path="/form" element={<Form />} />
       <Route path="/create" element={<Newaccount />} />
     </Routes>
