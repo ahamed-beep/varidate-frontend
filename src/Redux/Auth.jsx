@@ -1,68 +1,134 @@
-import { createAsyncThunk, createSlice, isRejected } from "@reduxjs/toolkit";
+import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import axiosinstance from "../Connection/Api";
-export const siginuserform = createAsyncThunk(
-    'signupuser',
-    async(user ,Credential)=>{
-        const responce = await axiosinstance.post('/signup',user)
-        console.log(responce.data)
-        return responce.data.user
-        
+import { toast } from "react-toastify";
+
+// ✅ Signup with Nodemailer Email Verification
+export const signupuserform = createAsyncThunk(
+  "signupuser",
+  async (user, { rejectWithValue }) => {
+    try {
+      const response = await axiosinstance.post("/post", user);
+      toast.success(response.data.message);
+      return null; // No user object returned from backend
+    } catch (error) {
+      const errMsg = error.response?.data?.message || "Signup failed";
+      toast.error(errMsg);
+      return rejectWithValue(errMsg);
     }
+  }
 );
+
+// ✅ Login
 export const loginuserform = createAsyncThunk(
-    'loginuser',
-    async(user , Credential)=>{
-        const fetch = await axiosinstance.post('/loginuser',user);
-        console.log(fetch.data)
-        return fetch.data.user
+  "loginuser",
+  async (user, { rejectWithValue }) => {
+    try {
+      const response = await axiosinstance.post("/login", user);
+      
+      // Check if user is verified before allowing login
+      if (response.data.user?.verified !== true) {
+        throw new Error("Email not verified");
+      }
+      
+      toast.success(response.data.message);
+      return response.data;
+      
+    } catch (error) {
+      const errMsg = error.response?.data?.message || "Login failed";
+      toast.error(errMsg);
+      return rejectWithValue(errMsg);
     }
-)
+  }
+);
+
+
+// In your Auth slice
+export const verifyEmailToken = createAsyncThunk(
+  "verifyEmail",
+  async ({ email, code }, { rejectWithValue }) => {
+    try {
+      const response = await axiosinstance.post("/verify-code", { email, code });
+      toast.success(response.data.message);
+      return response.data;
+    } catch (error) {
+      const errMsg = error.response?.data?.message || "Verification failed";
+      toast.error(errMsg);
+      return rejectWithValue(errMsg);
+    }
+  }
+);
+
 const authslice = createSlice({
-    name:'auth',
-    initialState:{
-        user:null,
-        error:null,
-        token:false,
-        authenticated:false,
-        loading:false
-    },
-    reducers:{
-        logout:(state)=>{
-            state.user = null;
-            state.token = null;
-        }
-    },
-    extraReducers:(builder)=>{
-        builder.addCase(siginuserform.pending, (state)=>{
-            state.loading=true,
-            state.user = null
-        }),
-        builder.addCase(siginuserform.fulfilled , (state,action)=>{
-            state.user = action.payload;
-            state.authenticated = true;
-            state.loading = false;
-        }),
-        builder.addCase(siginuserform.rejected,(state,action)=>{
-            state.error = action.payload;
-            state.user = null;
-        }),
-        builder.addCase(loginuserform.pending , (state)=>{
-            state.loading=true;
-            state.user = null;
-            state.token = null;
-        }),
-        builder.addCase(loginuserform.fulfilled , (state , action)=>{
-            state.user = action.payload;
-            state.token = action.payload;
-            state.authenticated = true;
-            state.loading = false ;
-        }),
-        builder.addCase(loginuserform.rejected , (state,action)=>{
-          state.error = action.payload;
-          state.user = null;
-          state.token = null;
-        })
+  name: "auth",
+  initialState: {
+    user: null,
+    error: null,
+    token: null,
+    authenticated: false,
+    loading: false,
+    emailVerified: false,
+    verificationLoading: false,
+    verificationError: null
+  },
+  reducers: {
+    logout: (state) => {
+      state.user = null;
+      state.token = null;
+      state.authenticated = false;
+      state.emailVerified = false;
     }
-})
+  },
+  extraReducers: (builder) => {
+    builder
+      // Signup
+      .addCase(signupuserform.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(signupuserform.fulfilled, (state) => {
+        state.loading = false;
+        state.error = null;
+      })
+      .addCase(signupuserform.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+
+      // Login
+      .addCase(loginuserform.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(loginuserform.fulfilled, (state, action) => {
+        state.loading = false;
+        state.authenticated = true;
+        state.user = action.payload.user;
+        state.token = action.payload.token;
+        state.emailVerified = true; // Since login only succeeds if verified
+        state.error = null;
+      })
+      .addCase(loginuserform.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+        state.authenticated = false;
+      })
+
+      // Email Verification
+      .addCase(verifyEmailToken.pending, (state) => {
+        state.verificationLoading = true;
+        state.verificationError = null;
+      })
+      .addCase(verifyEmailToken.fulfilled, (state, action) => {
+        state.verificationLoading = false;
+        state.emailVerified = true;
+        state.user = action.payload.user; // Update user data if returned
+        state.verificationError = null;
+      })
+      .addCase(verifyEmailToken.rejected, (state, action) => {
+        state.verificationLoading = false;
+        state.verificationError = action.payload;
+      });
+  }
+});
 export default authslice.reducer;
-export const {logout} = authslice.actions
+export const { logout } = authslice.actions;
