@@ -25,27 +25,26 @@ function VerifyEmailCode() {
     }
   };
 
-  const handleResend = async () => {
-    try {
-      const response = await dispatch(resendVerificationCode({ email }));
-      if (!response.error) {
-        toast.success("Verification code resent!");
-        setResendCooldown(60);
-        const countdown = setInterval(() => {
-          setResendCooldown(prev => {
-            if (prev <= 1) {
-              clearInterval(countdown);
-              return 0;
-            }
-            return prev - 1;
-          });
-        }, 1000);
-      }
-    } catch (error) {
-      toast.error(error.message || "Failed to resend code");
+const handleResend = async () => {
+  try {
+    const response = await dispatch(resendVerificationCode({ email })); // Pass as object
+    if (!response.error) {
+      toast.success("Verification code resent!");
+      setResendCooldown(60);
+      const countdown = setInterval(() => {
+        setResendCooldown(prev => {
+          if (prev <= 1) {
+            clearInterval(countdown);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
     }
-  };
-
+  } catch (error) {
+    toast.error(error.message || "Failed to resend code");
+  }
+};
   return (
     <div className="min-h-screen bg-white flex items-center justify-center px-4 py-10">
       <div className="bg-white rounded-xl shadow-lg border border-gray-300 flex flex-col md:flex-row w-full max-w-5xl overflow-hidden">

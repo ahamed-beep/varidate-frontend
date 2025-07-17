@@ -1,8 +1,9 @@
 "use client"
 
 import { useState } from "react"
+import { useLocation } from "react-router"
 
-// Constants
+// Constants (unchanged)
 const GENDERS = ["Male", "Female", "Other"]
 const MARITAL_STATUSES = ["Single", "Married", "Divorced", "Widowed"]
 const SHIFT_PREFERENCES = ["Day Shift", "Night Shift", "Flexible", "Remote"]
@@ -61,9 +62,9 @@ const MONTHS = [
   "December",
 ]
 const DAYS = Array.from({ length: 31 }, (_, i) => (i + 1).toString())
-const YEARS = Array.from({ length: 50 }, (_, i) => (2024 - i).toString())
+const YEARS = Array.from({ length: 50 }, (_, i) => (2024 - i).toString());
 
-// Components
+// Components (unchanged)
 const Section = ({ title, icon, children }) => {
   return (
     <div className="space-y-6">
@@ -164,7 +165,7 @@ const FileUploadButton = ({ label, onChange }) => {
   )
 }
 
-// Templates
+// Templates (unchanged)
 const newEducationTemplate = {
   id: "",
   degreeTitle: "",
@@ -195,11 +196,14 @@ const VISIBILITY_OPTIONS = ["Public", "Link", "Hide"]
 
 // Main Component
 const UserForm = () => {
+ const location = useLocation();
+  const loggedInEmail = location.state?.email || "";
+
   const [formData, setFormData] = useState({
     personal: {
       name: "",
       mobile: "",
-      email: "",
+      email: loggedInEmail, // Pre-populate with logged in email
       cnic: "",
       fatherName: "",
       city: "",
@@ -283,6 +287,49 @@ const UserForm = () => {
     }))
   }
 
+  // New function to handle select all visibility
+  const handleSelectAllVisibility = (value) => {
+    // Update all personal fields
+    const personalFields = Object.keys(formData.personal)
+    const newFieldVisibilities = { ...formData.fieldVisibilities }
+    
+    // Update personal fields
+    personalFields.forEach(field => {
+      newFieldVisibilities[field] = value
+    })
+    
+    // Update dob fields
+    newFieldVisibilities['dob'] = value
+    
+    // Update education fields
+    formData.education.forEach((edu, index) => {
+      newFieldVisibilities[`education-${index}-degreeTitle`] = value
+      newFieldVisibilities[`education-${index}-startDate`] = value
+      newFieldVisibilities[`education-${index}-endDate`] = value
+      newFieldVisibilities[`education-${index}-institute`] = value
+      newFieldVisibilities[`education-${index}-website`] = value
+      newFieldVisibilities[`education-${index}-degreeFile`] = value
+    })
+    
+    // Update experience fields
+    formData.experience.forEach((exp, index) => {
+      newFieldVisibilities[`experience-${index}-jobTitle`] = value
+      newFieldVisibilities[`experience-${index}-startDate`] = value
+      newFieldVisibilities[`experience-${index}-endDate`] = value
+      newFieldVisibilities[`experience-${index}-company`] = value
+      newFieldVisibilities[`experience-${index}-website`] = value
+      newFieldVisibilities[`experience-${index}-experienceFile`] = value
+      newFieldVisibilities[`experience-${index}-jobFunctions`] = value
+      newFieldVisibilities[`experience-${index}-industry`] = value
+    })
+    
+    setFormData(prev => ({
+      ...prev,
+      visibility: value,
+      fieldVisibilities: newFieldVisibilities
+    }))
+  }
+
   const renderVisibilityOptions = (field) => (
     <div className="flex gap-6 mt-3 p-3 bg-slate-50 rounded-lg border">
       <span className="text-sm font-medium text-slate-600 min-w-fit">Visibility:</span>
@@ -330,20 +377,37 @@ const UserForm = () => {
             <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
               <div className="mb-8">
                 <label className="block text-lg font-semibold text-slate-800 mb-4">Overall Field Visibility</label>
-                <div className="flex gap-8 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                  {VISIBILITY_OPTIONS.map((option) => (
-                    <label key={option} className="flex items-center gap-3 text-sm cursor-pointer">
-                      <input
-                        type="radio"
-                        name="visibility"
-                        value={option}
-                        checked={formData.visibility === option}
-                        onChange={handleVisibilityChange}
-                        className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
-                      />
-                      <span className="font-medium text-slate-700">{option}</span>
-                    </label>
-                  ))}
+                <div className="flex flex-col gap-4">
+                  <div className="flex gap-8 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                    {VISIBILITY_OPTIONS.map((option) => (
+                      <label key={option} className="flex items-center gap-3 text-sm cursor-pointer">
+                        <input
+                          type="radio"
+                          name="visibility"
+                          value={option}
+                          checked={formData.visibility === option}
+                          onChange={handleVisibilityChange}
+                          className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                        />
+                        <span className="font-medium text-slate-700">{option}</span>
+                      </label>
+                    ))}
+                  </div>
+                  
+                  {/* Add Select All dropdown */}
+                  <div className="flex items-center gap-4">
+                    <span className="text-sm font-medium text-slate-700">Set all fields to:</span>
+                    <select
+                      value=""
+                      onChange={(e) => handleSelectAllVisibility(e.target.value)}
+                      className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-white text-slate-900"
+                    >
+                      <option value="">Select visibility for all fields</option>
+                      {VISIBILITY_OPTIONS.map(option => (
+                        <option key={option} value={option}>Set all to {option}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               </div>
 
@@ -355,8 +419,8 @@ const UserForm = () => {
                   return (
                     <div key={field} className="space-y-4">
                       <div className="flex items-start gap-4">
-                        <div className="w-10 h-10 ">
-                          <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRYDhiJEiAq8I68UispktsY1u9Lha6bTI2uMw&s" />
+                        <div className="w-10 h-10">
+                          <img src='https://static.vecteezy.com/system/resources/previews/009/391/666/non_2x/winner-glass-award-clipart-design-illustration-free-png.png' />
                         </div>
                         <div className="flex-1">
                           <Input
@@ -366,26 +430,7 @@ const UserForm = () => {
                             onChange={handlePersonalChange}
                             required
                           />
-                        </div>
-                        <div className="flex flex-col gap-2 mt-8">
-                          <label className="flex items-center gap-2 text-sm cursor-pointer">
-                            <input
-                              type="radio"
-                              name={`${field}-choice`}
-                              value="yes"
-                              className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
-                            />
-                            <span className="text-slate-700">Yes</span>
-                          </label>
-                          <label className="flex items-center gap-2 text-sm cursor-pointer">
-                            <input
-                              type="radio"
-                              name={`${field}-choice`}
-                              value="no"
-                              className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
-                            />
-                            <span className="text-slate-700">No</span>
-                          </label>
+                          {renderVisibilityOptions(field)}
                         </div>
                       </div>
                     </div>
@@ -469,6 +514,7 @@ const UserForm = () => {
                       onChange={(e) => handleDynamicChange("education", index, e)}
                       options={DEGREE_TITLES}
                     />
+                    {renderVisibilityOptions(`education-${index}-degreeTitle`)}
 
                     <div className="grid grid-cols-2 gap-4">
                       <Select
@@ -486,6 +532,7 @@ const UserForm = () => {
                         options={YEARS}
                       />
                     </div>
+                    {renderVisibilityOptions(`education-${index}-startDate`)}
 
                     <div className="grid grid-cols-2 gap-4">
                       <Select
@@ -503,6 +550,7 @@ const UserForm = () => {
                         options={YEARS}
                       />
                     </div>
+                    {renderVisibilityOptions(`education-${index}-endDate`)}
 
                     <Select
                       name="institute"
@@ -511,6 +559,7 @@ const UserForm = () => {
                       onChange={(e) => handleDynamicChange("education", index, e)}
                       options={INSTITUTES}
                     />
+                    {renderVisibilityOptions(`education-${index}-institute`)}
 
                     <Input
                       name="website"
@@ -518,11 +567,13 @@ const UserForm = () => {
                       value={edu.website}
                       onChange={(e) => handleDynamicChange("education", index, e)}
                     />
+                    {renderVisibilityOptions(`education-${index}-website`)}
 
                     <FileUploadButton
                       label="Upload Degree"
                       onChange={(e) => handleDynamicFileChange("education", index, e)}
                     />
+                    {renderVisibilityOptions(`education-${index}-degreeFile`)}
                   </div>
                 </div>
               ))}
@@ -562,6 +613,7 @@ const UserForm = () => {
                       value={exp.jobTitle}
                       onChange={(e) => handleDynamicChange("experience", index, e)}
                     />
+                    {renderVisibilityOptions(`experience-${index}-jobTitle`)}
 
                     <div className="grid grid-cols-2 gap-4">
                       <Select
@@ -579,6 +631,7 @@ const UserForm = () => {
                         options={YEARS}
                       />
                     </div>
+                    {renderVisibilityOptions(`experience-${index}-startDate`)}
 
                     <div className="grid grid-cols-2 gap-4">
                       <Select
@@ -596,6 +649,7 @@ const UserForm = () => {
                         options={YEARS}
                       />
                     </div>
+                    {renderVisibilityOptions(`experience-${index}-endDate`)}
 
                     <Select
                       name="company"
@@ -604,6 +658,7 @@ const UserForm = () => {
                       onChange={(e) => handleDynamicChange("experience", index, e)}
                       options={COMPANIES}
                     />
+                    {renderVisibilityOptions(`experience-${index}-company`)}
 
                     <Input
                       name="website"
@@ -611,11 +666,13 @@ const UserForm = () => {
                       value={exp.website}
                       onChange={(e) => handleDynamicChange("experience", index, e)}
                     />
+                    {renderVisibilityOptions(`experience-${index}-website`)}
 
                     <FileUploadButton
                       label="Upload Experience Letter"
                       onChange={(e) => handleDynamicFileChange("experience", index, e)}
                     />
+                    {renderVisibilityOptions(`experience-${index}-experienceFile`)}
 
                     <CheckboxGroup
                       legend="Job Functions"
@@ -623,6 +680,7 @@ const UserForm = () => {
                       selectedOptions={exp.jobFunctions}
                       onChange={(opt) => handleDynamicCheckboxChange("experience", index, "jobFunctions", opt)}
                     />
+                    {renderVisibilityOptions(`experience-${index}-jobFunctions`)}
 
                     <Select
                       name="industry"
@@ -631,6 +689,7 @@ const UserForm = () => {
                       onChange={(e) => handleDynamicChange("experience", index, e)}
                       options={INDUSTRIES}
                     />
+                    {renderVisibilityOptions(`experience-${index}-industry`)}
                   </div>
                 </div>
               ))}

@@ -9,7 +9,7 @@ function Login() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  const fromhandler = async (e) => {
+const fromhandler = async (e) => {
     e.preventDefault();
     const data = { email, password };
 
@@ -17,7 +17,7 @@ function Login() {
       const response = await dispatch(loginuserform(data));
       if (response?.payload?.message === 'Login successful.') {
         localStorage.setItem('isLoggedIn', 'true');
-        navigate('/admin');
+        navigate('/admin', { state: { email } }); // Pass email in navigation state
       }
     } catch (error) {
       // handled by toast

@@ -60,7 +60,7 @@ export const verifyEmailToken = createAsyncThunk(
 
 export const resendVerificationCode = createAsyncThunk(
   'auth/resendVerificationCode',
-  async (email, { rejectWithValue }) => {
+  async ({ email }, { rejectWithValue }) => { // Destructure the email from an object
     try {
       const res = await axiosinstance.post('/resend-code', { email });
       return res.data;
