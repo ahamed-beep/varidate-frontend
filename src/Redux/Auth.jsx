@@ -58,6 +58,7 @@ export const verifyEmailToken = createAsyncThunk(
   }
 );
 
+<<<<<<< HEAD
 export const resendVerificationCode = createAsyncThunk(
   'auth/resendVerificationCode',
   async (email, { rejectWithValue }) => {
@@ -69,13 +70,18 @@ export const resendVerificationCode = createAsyncThunk(
     }
   }
 );
+=======
+>>>>>>> 6f748bbeecb58b7b7edf5af465ee3e486cb20d11
 const authslice = createSlice({
   name: "auth",
   initialState: {
     user: null,
     error: null,
     token: null,
+<<<<<<< HEAD
       message: null,
+=======
+>>>>>>> 6f748bbeecb58b7b7edf5af465ee3e486cb20d11
     authenticated: false,
     loading: false,
     emailVerified: false,
@@ -139,6 +145,7 @@ const authslice = createSlice({
       .addCase(verifyEmailToken.rejected, (state, action) => {
         state.verificationLoading = false;
         state.verificationError = action.payload;
+<<<<<<< HEAD
       })
         .addCase(resendVerificationCode.pending, (state) => {
       state.loading = true;
@@ -152,6 +159,9 @@ const authslice = createSlice({
       state.loading = false;
       state.error = action.payload;
     });
+=======
+      });
+>>>>>>> 6f748bbeecb58b7b7edf5af465ee3e486cb20d11
   }
 });
 export default authslice.reducer;

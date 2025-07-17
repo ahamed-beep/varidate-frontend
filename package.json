@@ -21,7 +21,10 @@
     "lucide-react": "^0.479.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+<<<<<<< HEAD
     "react-icons": "^5.5.0",
+=======
+>>>>>>> 6f748bbeecb58b7b7edf5af465ee3e486cb20d11
     "react-redux": "^9.2.0",
     "react-router": "^7.3.0",
     "react-router-dom": "^7.3.0",
