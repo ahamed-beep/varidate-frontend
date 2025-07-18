@@ -7,19 +7,40 @@ import 'react-toastify/dist/ReactToastify.css'; // ✅ Don't forget this
 
 import VerifyEmailCode from "./components/Verifyemail";
 import Userdashboard from "./components/UserDashboard";
+import ProtectedRoute from "./Protection/Protectroute";
+import ForgotPassword from "./components/ForgetPassword";
 
 
 
 function App() {
   return (
     <div>
-      <ToastContainer />
+      <ToastContainer
+  position="top-center"
+  autoClose={1000}
+  closeOnClick
+  draggable
+  pauseOnHover
+  pauseOnFocusLoss={false}
+  theme="light"
+  toastClassName="bg-white text-black border border-gray-300 rounded shadow-md p-4"
+  bodyClassName="text-sm"
+  progressClassName="bg-blue-500"
+/>
 
       <Routes>
         <Route path="/" element={<Form />} />
         <Route path="/create" element={<Newaccount />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
 
-        <Route path="/admin" element={<Userdashboard />} />
+       <Route
+          path="/admin"
+          element={
+            <ProtectedRoute>
+              <Userdashboard />
+            </ProtectedRoute>
+          }
+        />
 
 
     

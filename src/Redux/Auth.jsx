@@ -2,7 +2,6 @@ import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import axiosinstance from "../Connection/Api";
 import { toast } from "react-toastify";
 
-// ✅ Signup with Nodemailer Email Verification
 export const signupuserform = createAsyncThunk(
   "signupuser",
   async (user, { rejectWithValue }) => {
@@ -18,7 +17,6 @@ export const signupuserform = createAsyncThunk(
   }
 );
 
-// ✅ Login
 export const loginuserform = createAsyncThunk(
   "loginuser",
   async (user, { rejectWithValue }) => {
@@ -42,7 +40,6 @@ export const loginuserform = createAsyncThunk(
 );
 
 
-// In your Auth slice
 export const verifyEmailToken = createAsyncThunk(
   "verifyEmail",
   async ({ email, code }, { rejectWithValue }) => {
@@ -69,13 +66,38 @@ export const resendVerificationCode = createAsyncThunk(
     }
   }
 );
+
+export const forgotPassword = createAsyncThunk(
+  "auth/forgotPassword",
+  async (email, { rejectWithValue }) => {
+    try {
+      const res = await axiosinstance.post("/forgot-password", { email });
+      return res.data.message;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || "Something went wrong");
+    }
+  }
+);
+
+export const resetPassword = createAsyncThunk(
+  "auth/resetPassword",
+  async ({ email, code, newPassword }, { rejectWithValue }) => {
+    try {
+      const res = await axiosinstance.post("/reset-password", { email, code, newPassword });
+      return res.data.message;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || "Something went wrong");
+    }
+  }
+);
+
 const authslice = createSlice({
   name: "auth",
   initialState: {
-    user: null,
+       user: null,
     error: null,
     token: null,
-      message: null,
+    message: null,
     authenticated: false,
     loading: false,
     emailVerified: false,
@@ -83,7 +105,7 @@ const authslice = createSlice({
     verificationError: null
   },
   reducers: {
-    logout: (state) => {
+    logouts: (state) => {
       state.user = null;
       state.token = null;
       state.authenticated = false;
@@ -151,8 +173,36 @@ const authslice = createSlice({
     .addCase(resendVerificationCode.rejected, (state, action) => {
       state.loading = false;
       state.error = action.payload;
-    });
+    })
+    .addCase(forgotPassword.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+        state.message = null;
+      })
+      .addCase(forgotPassword.fulfilled, (state, action) => {
+        state.loading = false;
+        state.message = action.payload;
+      })
+      .addCase(forgotPassword.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+
+      // Reset Password
+      .addCase(resetPassword.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+        state.message = null;
+      })
+      .addCase(resetPassword.fulfilled, (state, action) => {
+        state.loading = false;
+        state.message = action.payload;
+      })
+      .addCase(resetPassword.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      });
   }
 });
 export default authslice.reducer;
-export const { logout } = authslice.actions;
+export const { logouts } = authslice.actions;

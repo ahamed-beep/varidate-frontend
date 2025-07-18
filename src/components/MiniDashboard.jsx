@@ -9,28 +9,16 @@ import {
   Mail,
   LogOut,
   ClipboardList,
+  Search,
   Menu
 } from 'lucide-react'
 import Home from './UserForm.jsx'
-import MiniDashboard from './MiniDashboard.jsx'
-import { logouts } from '../Redux/Auth.jsx'
-import { useDispatch } from 'react-redux'
-import { useNavigate } from 'react-router'
-import { toast } from 'react-toastify'
 
 function Userdashboard() {
   const [activeTab, setActiveTab] = useState('Dashboard')
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [showSearch, setShowSearch] = useState(false)
 
-  const dispatch = useDispatch();
-  const navigate = useNavigate();
-
-   const handleLogout = () => {
-    dispatch(logouts()); // clear redux state
-    localStorage.removeItem('isLoggedIn'); // clear localStorage auth flag
-    toast.success("Logged out successfully"); // optional
-    navigate('/'); // redirect to login page
-  };
 
   const renderContent = () => {
     switch (activeTab) {
@@ -64,64 +52,78 @@ function Userdashboard() {
   }
 
   return (
-    <div>
-      <div className='block md:hidden '>
-
-<MiniDashboard />
-      </div>
-   
-    <div className="min-h-screen hidden md:block bg-gray-50">
+    <div className="min-h-screen bg-gray-50">
       {/* Topbar */}
-      <header className="bg-blue-600 fixed z-50 h-16 w-full px-4 md:px-6 flex items-center justify-between border-b border-blue-700">
-        <div className="flex items-center space-x-4">
-          <button onClick={() => setSidebarOpen(!sidebarOpen)} className="text-white md:hidden">
-            <Menu />
-          </button>
-          <img src="/Images/logo.png" className="h-10 hidden md:block" alt="Logo" />
-          <input
-            type="text"
-            placeholder="Search task"
-            className="px-3 py-1 mt-2 hidden md:block border border-blue-300 bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-white rounded-full w-64"
-          />
+     <header className="bg-blue-600 fixed z-50 w-full border-b border-blue-700">
+  <div className="h-16 px-4 md:px-6 flex items-center justify-between">
+    {/* Left Section: Menu Toggle + Logo */}
+    <div className="flex items-center space-x-4">
+      <button onClick={() => setSidebarOpen(!sidebarOpen)} className="text-white md:hidden">
+        <Menu />
+      </button>
+      <img src="/Images/logo.png" className="h-10" alt="Logo" />
+    </div>
+
+    {/* Center Section: Desktop Search */}
+    <div className="hidden md:flex flex-1 justify-center">
+      <input
+        type="text"
+        placeholder="Search task"
+        className="px-3 py-1 border border-blue-300 bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-white rounded-full w-64"
+      />
+    </div>
+
+    {/* Right Section: Bell + Search (Mobile) + Avatar */}
+    <div className="flex items-center space-x-4">
+      {/* Search Icon (Mobile) */}
+      <button onClick={() => setShowSearch(!showSearch)} className="text-white md:hidden">
+        <Search />
+      </button>
+
+      <button className="relative">
+        <Bell size={20} className="text-white" />
+      </button>
+      <div className="flex items-center space-x-3">
+        <img
+          src="https://i.pravatar.cc/40"
+          alt="avatar"
+          className="w-10 h-10 rounded-full"
+        />
+        <div className="text-right text-white hidden sm:block">
+          <div className="font-medium text-sm">Totok Michael</div>
+          <div className="text-xs text-blue-100">tmichael20@mail.com</div>
         </div>
-        <div className="flex items-center space-x-4">
-          <button className="relative">
-            <Bell size={20} className="text-white" />
-          </button>
-          <div className="flex items-center space-x-3">
-            <img
-              src="https://i.pravatar.cc/40"
-              alt="avatar"
-              className="w-10 h-10 rounded-full"
-            />
-            <div className="text-right text-white hidden sm:block">
-              <div className="font-medium text-sm">Totok Michael</div>
-              <div className="text-xs text-blue-100">tmichael20@mail.com</div>
-            </div>
-          </div>
-        </div>
-      </header>
+      </div>
+    </div>
+  </div>
+
+  {/* Responsive Search Dropdown */}
+  {showSearch && (
+    <div className="md:hidden px-4 py-2 bg-white shadow">
+      <input
+        type="text"
+        placeholder="Search task"
+        className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+      />
+    </div>
+  )}
+</header>
+
 
       {/* Sidebar + Content */}
-      <div className="flex pt-16">
+      <div className="flex pt-16 ">
         {/* Sidebar */}
-        <aside className={`fixed top-0 md:relative  z-40 bg-white border-r border-gray-200 w-64 p-6 space-y-4 transform transition-transform duration-300 ease-in-out
+        <aside className={`fixed  md:relative z-40 bg-white border-r border-gray-200 w-full h-full p-6 space-y-4 transform transition-transform duration-300 ease-in-out
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}>
-          <nav className=" fixed  space-y-2 mt-4">
+          <nav className="space-y-2 mt-4 fi " >
             <NavItem icon={<LayoutDashboard size={20} />} label="Dashboard" active={activeTab === 'Dashboard'} onClick={() => handleTab('Dashboard')} />
             <NavItem icon={<ClipboardList size={20} />} label="Tasks" active={activeTab === 'Tasks'} onClick={() => handleTab('Tasks')} />
             <NavItem icon={<Calendar size={20} />} label="Calendar" active={activeTab === 'Calendar'} onClick={() => handleTab('Calendar')} />
             <NavItem icon={<Settings size={20} />} label="Settings" active={activeTab === 'Settings'} onClick={() => handleTab('Settings')} />
             <NavItem icon={<LifeBuoy size={20} />} label="Support" active={activeTab === 'Support'} onClick={() => handleTab('Support')} />
             <NavItem icon={<Mail size={20} />} label="Contact" active={activeTab === 'Contact'} onClick={() => handleTab('Contact')} />
-            <div className='border-t  border-gray pt-4 mt-40'>
-      <NavItem
-  icon={<LogOut size={20} />}
-  label="Logout"
-  active={false} // logout doesn't need an active state
-  onClick={handleLogout}
-/>
-
+            <div className='border-t border-gray-300 pt-4 mt-6'>
+              <NavItem icon={<LogOut size={20} />} label="Logout" active={activeTab === 'Logout'} onClick={() => handleTab('Logout')} />
             </div>
           </nav>
         </aside>
@@ -132,7 +134,6 @@ function Userdashboard() {
         </main>
       </div>
     </div>
-     </div>
   )
 
   function handleTab(tab) {

@@ -72,7 +72,7 @@ const fromhandler = async (e) => {
             </div>
 
             <div className="flex justify-between text-sm text-gray-600 mb-4">
-              <Link to="#" className="hover:underline text-blue-600">
+              <Link to="/forgot-password" className="hover:underline text-blue-600">
                 Forgotten Password?
               </Link>
             </div>

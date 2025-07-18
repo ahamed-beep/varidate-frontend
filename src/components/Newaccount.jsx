@@ -42,7 +42,6 @@ function Newaccount() {
     const response = await dispatch(signupuserform(formData));
 
     if (!response.error) {
-      toast.success("Verification code sent to your email.");
       navigate('/verify-email', { state: { email: formData.email } });
     } else {
       toast.error("Signup failed.");

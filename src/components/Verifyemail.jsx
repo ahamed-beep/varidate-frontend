@@ -17,7 +17,6 @@ function VerifyEmailCode() {
     try {
       const response = await dispatch(verifyEmailToken({ email, code }));
       if (!response.error) {
-        toast.success("Email verified successfully!");
         navigate('/');
       }
     } catch (error) {
