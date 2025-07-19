@@ -9,6 +9,7 @@ import VerifyEmailCode from "./components/Verifyemail";
 import Userdashboard from "./components/UserDashboard";
 import ProtectedRoute from "./Protection/Protectroute";
 import ForgotPassword from "./components/ForgetPassword";
+import Home from "./components/UserForm";
 
 
 
@@ -32,6 +33,8 @@ function App() {
         <Route path="/" element={<Form />} />
         <Route path="/create" element={<Newaccount />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/fone" element={<Home />} />
+
 
        <Route
           path="/admin"

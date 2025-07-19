@@ -70,14 +70,14 @@ const handleResend = async () => {
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
                 required
-                className="w-full border border-gray-300 px-4 py-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-gray-300 px-4 py-2 rounded focus:outline-none focus:ring-2 focus:ring-[#f4793d]"
                 placeholder="Enter 6-digit code"
               />
             </div>
 
             <button
               type="submit"
-              className="w-full bg-[#0B1F3A] text-white font-bold py-2 rounded hover:bg-black transition duration-300"
+              className="w-full bg-[#f4793d] text-white font-bold py-2 rounded hover:bg-black transition duration-300"
             >
               Verify
             </button>
@@ -89,7 +89,7 @@ const handleResend = async () => {
               onClick={handleResend}
               disabled={resendCooldown > 0}
               className={`text-sm font-semibold ${
-                resendCooldown > 0 ? 'text-gray-400 cursor-not-allowed' : 'text-blue-600 hover:underline'
+                resendCooldown > 0 ? 'text-gray-400 cursor-not-allowed' : 'text-[#f4793d] hover:underline'
               }`}
             >
               {resendCooldown > 0

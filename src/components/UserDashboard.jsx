@@ -32,6 +32,9 @@ function Userdashboard() {
     navigate('/'); // redirect to login page
   };
 
+  const userEmail = localStorage.getItem('userEmail') || 'Email not available';
+const userName = localStorage.getItem('userName') || 'User';
+
   const renderContent = () => {
     switch (activeTab) {
       case 'Dashboard':
@@ -72,7 +75,7 @@ function Userdashboard() {
    
     <div className="min-h-screen hidden md:block bg-gray-50">
       {/* Topbar */}
-      <header className="bg-blue-600 fixed z-50 h-16 w-full px-4 md:px-6 flex items-center justify-between border-b border-blue-700">
+      <header className="bg-[#f4793d] fixed z-50 h-16 w-full px-4 md:px-6 flex items-center justify-between border-b border-[#f4793d]">
         <div className="flex items-center space-x-4">
           <button onClick={() => setSidebarOpen(!sidebarOpen)} className="text-white md:hidden">
             <Menu />
@@ -81,7 +84,7 @@ function Userdashboard() {
           <input
             type="text"
             placeholder="Search task"
-            className="px-3 py-1 mt-2 hidden md:block border border-blue-300 bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-white rounded-full w-64"
+            className="px-3 py-1 mt-2 hidden md:block border border-[#f4793d] bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-white rounded-full w-64"
           />
         </div>
         <div className="flex items-center space-x-4">
@@ -90,14 +93,15 @@ function Userdashboard() {
           </button>
           <div className="flex items-center space-x-3">
             <img
-              src="https://i.pravatar.cc/40"
+              src="/Images/profile.png"
               alt="avatar"
-              className="w-10 h-10 rounded-full"
+              className="w-10 h-10 rounded-full  bg-white "
             />
-            <div className="text-right text-white hidden sm:block">
-              <div className="font-medium text-sm">Totok Michael</div>
-              <div className="text-xs text-blue-100">tmichael20@mail.com</div>
-            </div>
+           <div className="text-right text-white hidden sm:block">
+  <div className="font-medium text-sm">{userName}</div>
+  <div className="text-xs text-blue-100">{userEmail}</div>
+</div>
+
           </div>
         </div>
       </header>
@@ -146,7 +150,7 @@ function NavItem({ icon, label, active = false, onClick }) {
     <div
       onClick={onClick}
       className={`flex items-center px-3 py-2 rounded-lg cursor-pointer text-sm font-medium transition
-        ${active ? 'bg-blue-100 text-blue-700' : 'text-gray-700 hover:bg-gray-100'}`}
+        ${active ? 'bg-gray-100 text-[#f4793d]' : 'text-gray-700 hover:bg-gray-100'}`}
     >
       <span className="mr-3">{icon}</span>
       {label}

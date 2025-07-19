@@ -73,7 +73,7 @@ function Newaccount() {
               <div className="mb-8">
                 <h2 className="text-3xl font-bold text-black mb-2 relative pb-3">
                   Create New Account
-                  <span className="absolute bottom-0 left-0 w-16 h-1 bg-blue-600"></span>
+                  <span className="absolute bottom-0 left-0 w-16 h-1 bg-[#f4793d]"></span>
                 </h2>
                 <p className="text-gray-600">Join us today and start your shopping journey</p>
               </div>
@@ -88,7 +88,7 @@ function Newaccount() {
                       value={formData.firstname}
                       onChange={handleChange}
                       required
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#f4793d] focus:border-transparent transition"
                       placeholder="John"
                     />
                   </div>
@@ -100,7 +100,7 @@ function Newaccount() {
                       value={formData.lastname}
                       onChange={handleChange}
                       required
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#f4793d] focus:border-transparent transition"
                       placeholder="Doe"
                     />
                   </div>
@@ -114,7 +114,7 @@ function Newaccount() {
                     value={formData.email}
                     onChange={handleChange}
                     required
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#f4793d] focus:border-transparent transition"
                     placeholder="your@email.com"
                   />
                 </div>
@@ -129,13 +129,13 @@ function Newaccount() {
                       onChange={handleChange}
                       required
                       minLength="5"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition pr-10"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#f4793d] focus:border-transparent transition pr-10"
                       placeholder="Enter Password"
                     />
                     <button
                       type="button"
                       onClick={togglePasswordVisibility}
-                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-blue-600"
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-[#f4793d]"
                     >
                       {showPassword ? <FaEyeSlash /> : <FaEye />}
                     </button>
@@ -148,7 +148,7 @@ function Newaccount() {
 
                 <button
                   type="submit"
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg shadow-md hover:shadow-lg transition duration-300"
+                  className="w-full bg-[#f4793d] hover:bg-[#f4793d] text-white font-bold py-3 px-4 rounded-lg shadow-md hover:shadow-lg transition duration-300"
                 >
                   Create Account
                 </button>
@@ -160,45 +160,45 @@ function Newaccount() {
               <div className="mb-8">
                 <h2 className="text-3xl font-bold text-black mb-2 relative pb-3">
                   Welcome Back!
-                  <span className="absolute bottom-0 left-0 w-16 h-1 bg-blue-600"></span>
+                  <span className="absolute bottom-0 left-0 w-16 h-1 bg-[#f4793d]"></span>
                 </h2>
                 <p className="text-gray-600">Already have an account? Sign in to continue.</p>
               </div>
 
               <Link to="/">
-                <button className="w-full bg-white border-2 border-blue-600 text-blue-600 font-bold py-3 px-4 rounded-lg shadow-sm hover:shadow-md hover:bg-blue-50 transition duration-300 mb-8">
+                <button className="w-full bg-white border-2 border-[#f4793d] text-[#f4793d] font-bold py-3 px-4 rounded-lg shadow-sm hover:shadow-md hover:bg-blue-50 transition duration-300 mb-8">
                   Login to Your Account
                 </button>
               </Link>
 
               <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
                 <h3 className="text-lg font-semibold text-black mb-4 flex items-center">
-                  <svg className="w-5 h-5 text-blue-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                  <svg className="w-5 h-5 text-[#f4793d] mr-2" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                   </svg>
                   Benefits of creating an account
                 </h3>
                 <ul className="space-y-3 text-gray-700">
                   <li className="flex items-start">
-                    <svg className="w-5 h-5 text-blue-600 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <svg className="w-5 h-5 text-[#f4793d] mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                     </svg>
                     <span>Faster checkout with saved details</span>
                   </li>
                   <li className="flex items-start">
-                    <svg className="w-5 h-5 text-blue-600 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <svg className="w-5 h-5 text-[#f4793d] mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                     </svg>
                     <span>Track orders and order history</span>
                   </li>
                   <li className="flex items-start">
-                    <svg className="w-5 h-5 text-blue-600 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <svg className="w-5 h-5 text-[#f4793d] mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                     </svg>
                     <span>Exclusive member discounts and offers</span>
                   </li>
                   <li className="flex items-start">
-                    <svg className="w-5 h-5 text-blue-600 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <svg className="w-5 h-5 text-[#f4793d] mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                     </svg>
                     <span>Personalized shopping experience</span>

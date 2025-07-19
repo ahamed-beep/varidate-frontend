@@ -54,7 +54,7 @@ function Userdashboard() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Topbar */}
-     <header className="bg-blue-600 fixed z-50 w-full border-b border-blue-700">
+     <header className="bg-[#f4793d] fixed z-50 w-full border-b border-[#f4793d]">
   <div className="h-16 px-4 md:px-6 flex items-center justify-between">
     {/* Left Section: Menu Toggle + Logo */}
     <div className="flex items-center space-x-4">
@@ -69,7 +69,7 @@ function Userdashboard() {
       <input
         type="text"
         placeholder="Search task"
-        className="px-3 py-1 border border-blue-300 bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-white rounded-full w-64"
+        className="px-3 py-1 border border-[#f4793d] bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-white rounded-full w-64"
       />
     </div>
 
@@ -103,7 +103,7 @@ function Userdashboard() {
       <input
         type="text"
         placeholder="Search task"
-        className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#f4793d]"
       />
     </div>
   )}
@@ -147,7 +147,7 @@ function NavItem({ icon, label, active = false, onClick }) {
     <div
       onClick={onClick}
       className={`flex items-center px-3 py-2 rounded-lg cursor-pointer text-sm font-medium transition
-        ${active ? 'bg-blue-100 text-blue-700' : 'text-gray-700 hover:bg-gray-100'}`}
+        ${active ? 'bg-blue-100 text-[#f4793d]' : 'text-gray-700 hover:bg-gray-100'}`}
     >
       <span className="mr-3">{icon}</span>
       {label}
