@@ -1,7 +1,11 @@
 "use client"
 
-import { useState } from "react";
-import { useLocation } from "react-router";
+import { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+import { resetProfileState, submitProfile } from "../Redux/profile";
+import axiosinstance from "../Connection/Api";
+import { useDropzone } from "react-dropzone";
 
 // Constants with Pakistani details
 const COUNTRIES = ["Pakistan", "India", "China", "USA", "UK", "UAE", "Canada", "Other"];
@@ -78,6 +82,7 @@ const JOB_FUNCTIONS = [
   "Operations"
 ];
 const VISIBILITY_PRESETS = ["Public", "Link", "Hide"];
+const VERIFICATION_LEVELS = ["Silver", "Gold", "Platinum"];
 
 // Templates
 const newEducationTemplate = {
@@ -103,6 +108,53 @@ const newExperienceTemplate = {
 };
 
 // Components
+
+
+const FileUpload = ({ label, onDrop, file, className = "" }) => {
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: {
+      'application/pdf': ['.pdf'],
+      'image/*': ['.png', '.jpg', '.jpeg']
+    },
+    maxFiles: 1
+  });
+
+  return (
+    <div className={`space-y-1 ${className}`}>
+      <div className="flex items-center gap-1">
+        <VerificationBadge level="Silver" />
+        <label className="block text-xs font-semibold text-slate-700">
+          {label}
+          <span className="text-red-500 ml-0.5">*</span>
+        </label>
+      </div>
+      <div 
+        {...getRootProps()} 
+        className={`border-2 border-dashed rounded-md p-4 text-center cursor-pointer 
+          ${isDragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300'}`}
+      >
+        <input {...getInputProps()} />
+        {file ? (
+          <div className="flex items-center justify-center gap-2">
+            <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+            </svg>
+            <span className="text-sm text-gray-700">{file.name}</span>
+          </div>
+        ) : (
+          <div>
+            <p className="text-sm text-gray-600">
+              {isDragActive ? 'Drop the file here' : 'Drag & drop a file here, or click to select'}
+            </p>
+            <p className="text-xs text-gray-500 mt-1">PDF, PNG, JPG (Max 5MB)</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 const Section = ({ title, icon, children }) => {
   return (
     <div className="space-y-4">
@@ -115,16 +167,28 @@ const Section = ({ title, icon, children }) => {
   );
 };
 
+const VerificationBadge = ({ level }) => {
+  const badgeColors = {
+    Silver: "bg-gray-300 text-gray-800",
+    Gold: "bg-yellow-400 text-yellow-800",
+    Platinum: "bg-blue-100 text-blue-800"
+  };
+
+  return (
+    <span 
+      className={`text-xs px-2 py-0.5 rounded-full ${badgeColors[level] || badgeColors.Silver}`}
+      title={`Verified: ${level}`}
+    >
+      {level}
+    </span>
+  );
+};
+
 const Input = ({ label, name, value, onChange, required = false, type = "text", className = "", fieldName = "" }) => {
   return (
     <div className={`space-y-1 ${className}`}>
       <div className="flex items-center gap-1">
-        <img 
-          src='/Images/silv.png'
-          alt="Verified" 
-          className="w-5 h-5 opacity-80"
-          title="Verified field"
-        />
+        <VerificationBadge level="Silver" />
         <label className="block text-xs font-semibold text-slate-700">
           {label}
           {required && <span className="text-red-500 ml-0.5">*</span>}
@@ -141,20 +205,13 @@ const Input = ({ label, name, value, onChange, required = false, type = "text", 
     </div>
   );
 };
-  
 
 const Select = ({ name, label, value, onChange, options, defaultOption, className = "", fieldName = "" }) => {
   return (
     <div className={`space-y-1 ${className}`}>
       <div className="flex items-center gap-1">
-         <img 
-          src='/Images/silv.png' 
-          alt="Verified" 
-          className="w-5 h-5 opacity-80"
-          title="Verified field"
-        />
+        <VerificationBadge level="Silver" />
         {label && <label className="block text-xs font-semibold text-slate-700">{label}</label>}
-       
       </div>
       <select
         name={name}
@@ -174,21 +231,22 @@ const Select = ({ name, label, value, onChange, options, defaultOption, classNam
 };
 
 const DateInput = ({ label, value, onChange, className = "", fieldName = "" }) => {
+  const formatDateForInput = (date) => {
+    if (!date) return '';
+    const d = new Date(date);
+    if (isNaN(d.getTime())) return '';
+    return d.toISOString().split('T')[0];
+  };
+
   return (
     <div className={`space-y-1 ${className}`}>
       <div className="flex items-center gap-1">
-           <img 
-          src='/Images/silv.png'
-          alt="Verified" 
-          className="w-5 h-5 opacity-80"
-          title="Verified field"
-        />
+        <VerificationBadge level="Silver" />
         <label className="block text-xs font-semibold text-slate-700">{label}</label>
-     
       </div>
       <input
         type="date"
-        value={value ? value.toISOString().split('T')[0] : ''}
+        value={formatDateForInput(value)}
         onChange={(e) => {
           const date = e.target.value ? new Date(e.target.value) : null;
           onChange(date);
@@ -203,16 +261,9 @@ const CheckboxGroup = ({ legend, options, selectedOptions, onChange, className =
   return (
     <div className={`space-y-2 ${className}`}>
       <div className="flex items-center gap-1">
-        
+        <VerificationBadge level="Silver" />
         <legend className="text-xs font-semibold text-slate-700">{legend}</legend>
-       
       </div>
-       <img 
-          src='/Images/silv.png'
-          alt="Verified" 
-          className="w-5 h-5 opacity-80"
-          title="Verified field"
-        />
       <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
         {options.map((option) => (
           <label
@@ -237,14 +288,8 @@ const FileUploadButton = ({ label, onChange, className = "", fieldName = "" }) =
   return (
     <div className={`space-y-1 ${className}`}>
       <div className="flex items-center gap-1">
-             <img 
-          src='/Images/silv.png' 
-          alt="Verified" 
-          className="w-5 h-5 opacity-80"
-          title="Verified field"
-        />
+        <VerificationBadge level="Silver" />
         <label className="block text-xs font-semibold text-slate-700">{label}</label>
-   
       </div>
       <div className="relative">
         <input type="file" onChange={onChange} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
@@ -266,7 +311,6 @@ const FileUploadButton = ({ label, onChange, className = "", fieldName = "" }) =
   );
 };
 
-// Visibility Control Component
 const VisibilityControl = ({ fieldName, currentVisibility, onChange }) => {
   return (
     <div className="flex flex-col gap-1 mt-1 p-2 rounded bg-slate-50">
@@ -290,9 +334,7 @@ const VisibilityControl = ({ fieldName, currentVisibility, onChange }) => {
   );
 };
 
-// FieldWrapper component to combine field and visibility controls
 const FieldWrapper = ({ children, fieldName, formData, handleFieldVisibility }) => {
-  // Check if the field is CNIC and force visibility to "Hide"
   const isCnicField = fieldName === 'cnic' || fieldName === 'CNIC';
   const visibility = isCnicField 
     ? "Hide" 
@@ -305,17 +347,19 @@ const FieldWrapper = ({ children, fieldName, formData, handleFieldVisibility }) 
         <VisibilityControl 
           fieldName={fieldName}
           currentVisibility={visibility}
-          onChange={isCnicField ? null : handleFieldVisibility} // Disable changes for CNIC
-          disabled={isCnicField} // Optional: disable the control for CNIC
+          onChange={isCnicField ? null : handleFieldVisibility}
+          disabled={isCnicField}
         />
       )}
     </div>
   );
 };
-// Main Component
+
 const UserForm = () => {
   const location = useLocation();
   const loggedInEmail = location.state?.email || "";
+  const dispatch = useDispatch();
+  const { loading, error, success, profile } = useSelector(state => state.profile);
 
   const [formData, setFormData] = useState({
     personal: {
@@ -340,7 +384,45 @@ const UserForm = () => {
     experience: [{ ...newExperienceTemplate, id: Date.now().toString() }],
   });
 
+  const [files, setFiles] = useState({
+  resume: null,
+  cnicFile: null
+});
+
+const handleFileDrop = (field) => (acceptedFiles) => {
+  if (acceptedFiles && acceptedFiles.length > 0) {
+    setFiles(prev => ({
+      ...prev,
+      [field]: acceptedFiles[0]
+    }));
+  }
+};
+
+const handleRemoveFile = (field) => {
+  setFiles(prev => ({
+    ...prev,
+    [field]: null
+  }));
+};
+
   const [selectedPreset, setSelectedPreset] = useState("");
+
+  useEffect(() => {
+    if (success) {
+      console.log("Profile submitted successfully!");
+      dispatch(resetProfileState());
+    }
+  }, [success, dispatch]);
+
+  useEffect(() => {
+  if (error) {
+    // Check if error is an object with message property
+    const errorMessage = error.message || 
+                        error.error || 
+                        JSON.stringify(error);
+    console.log(`Error: ${errorMessage}`);
+  }
+  }, [error]);
 
   const applyVisibilityPreset = (preset) => {
     const newFieldVisibilities = {};
@@ -465,6 +547,75 @@ const UserForm = () => {
     }));
   };
 
+const handleSubmit = async (e) => {
+  e.preventDefault();
+
+  if (!files.resume || !files.cnicFile) {
+    alert('Please upload both resume and CNIC files');
+    return;
+  }
+
+  const formDataToSend = new FormData();
+
+  // Append personal info
+  Object.entries(formData.personal).forEach(([key, value]) => {
+    if (key === 'dob' && value) {
+      formDataToSend.append(key, value.toISOString());
+    } else if (Array.isArray(value)) {
+      value.forEach(item => formDataToSend.append(key, item));
+    } else if (value !== null && value !== undefined) {
+      formDataToSend.append(key, value);
+    }
+  });
+
+  // Append main files
+  formDataToSend.append('resume', files.resume);
+  formDataToSend.append('cnicFile', files.cnicFile);
+
+  // Append education data
+  formData.education.forEach((edu, index) => {
+    Object.entries(edu).forEach(([field, value]) => {
+      if (field !== 'id' && field !== 'degreeFile' && value !== null && value !== undefined) {
+        formDataToSend.append(`education[${index}][${field}]`, value);
+      }
+    });
+
+    // ✅ Correct field name expected by multer
+    if (edu.degreeFile) {
+      formDataToSend.append('degreeFiles', edu.degreeFile);
+    }
+  });
+
+  // Append experience data
+  formData.experience.forEach((exp, index) => {
+    Object.entries(exp).forEach(([field, value]) => {
+      if (field !== 'id' && field !== 'experienceFile' && value !== null && value !== undefined) {
+        if (Array.isArray(value)) {
+          value.forEach(item => formDataToSend.append(`experience[${index}][${field}][]`, item));
+        } else {
+          formDataToSend.append(`experience[${index}][${field}]`, value);
+        }
+      }
+    });
+
+    // ✅ Correct field name expected by multer
+    if (exp.experienceFile) {
+      formDataToSend.append('experienceFiles', exp.experienceFile);
+    }
+  });
+
+  try {
+    const response = await axiosinstance.post('/profile', formDataToSend, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    console.log('Profile created successfully', response.data);
+  } catch (err) {
+    console.error('Error submitting profile:', err.response?.data || err.message);
+  }
+};
+
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
@@ -512,7 +663,7 @@ const UserForm = () => {
       </div>
 
       <div className="max-w-6xl mx-auto px-3 py-4">
-        <form className="space-y-6">
+        <form className="space-y-6" onSubmit={handleSubmit}>
           {/* Personal Information */}
           <Section
             icon={
@@ -533,6 +684,7 @@ const UserForm = () => {
                     value={formData.personal.name}
                     onChange={handlePersonalChange}
                     required
+                    fieldName="name"
                   />
                 </FieldWrapper>
 
@@ -543,6 +695,7 @@ const UserForm = () => {
                     value={formData.personal.mobile}
                     onChange={handlePersonalChange}
                     required
+                    fieldName="mobile"
                   />
                 </FieldWrapper>
 
@@ -554,18 +707,20 @@ const UserForm = () => {
                     onChange={handlePersonalChange}
                     type="email"
                     required
+                    fieldName="email"
                   />
                 </FieldWrapper>
 
                 <FieldWrapper fieldName="cnic" formData={formData} handleFieldVisibility={handleFieldVisibility}>
-  <Input
-    label="CNIC"
-    name="cnic"
-    value={formData.personal.cnic}
-    onChange={handlePersonalChange}
-    required
-  />
-</FieldWrapper>
+                  <Input
+                    label="CNIC"
+                    name="cnic"
+                    value={formData.personal.cnic}
+                    onChange={handlePersonalChange}
+                    required
+                    fieldName="cnic"
+                  />
+                </FieldWrapper>
 
                 <FieldWrapper fieldName="fatherName" formData={formData} handleFieldVisibility={handleFieldVisibility}>
                   <Input
@@ -574,6 +729,7 @@ const UserForm = () => {
                     value={formData.personal.fatherName}
                     onChange={handlePersonalChange}
                     required
+                    fieldName="fatherName"
                   />
                 </FieldWrapper>
 
@@ -584,6 +740,7 @@ const UserForm = () => {
                     value={formData.personal.city}
                     onChange={handlePersonalChange}
                     required
+                    fieldName="city"
                   />
                 </FieldWrapper>
 
@@ -594,6 +751,7 @@ const UserForm = () => {
                     value={formData.personal.country}
                     onChange={handlePersonalChange}
                     options={COUNTRIES}
+                    fieldName="country"
                   />
                 </FieldWrapper>
 
@@ -605,6 +763,7 @@ const UserForm = () => {
                     onChange={handlePersonalChange}
                     options={GENDERS}
                     defaultOption="Select Gender"
+                    fieldName="gender"
                   />
                 </FieldWrapper>
 
@@ -616,6 +775,7 @@ const UserForm = () => {
                     onChange={handlePersonalChange}
                     options={MARITAL_STATUSES}
                     defaultOption="Select Marital Status"
+                    fieldName="maritalStatus"
                   />
                 </FieldWrapper>
 
@@ -627,6 +787,7 @@ const UserForm = () => {
                     onChange={handlePersonalChange}
                     options={RESIDENT_STATUSES}
                     defaultOption="Select Resident Status"
+                    fieldName="residentStatus"
                   />
                 </FieldWrapper>
 
@@ -636,6 +797,7 @@ const UserForm = () => {
                     name="nationality"
                     value={formData.personal.nationality}
                     onChange={handlePersonalChange}
+                    fieldName="nationality"
                   />
                 </FieldWrapper>
 
@@ -644,8 +806,51 @@ const UserForm = () => {
                     label="Date of Birth"
                     value={formData.personal.dob}
                     onChange={handleDobChange}
+                    fieldName="dob"
                   />
                 </FieldWrapper>
+                {/* Add these right before the closing </div> of the grid in Personal Information */}
+<FieldWrapper fieldName="resume" formData={formData} handleFieldVisibility={handleFieldVisibility}>
+  <FileUpload
+    label="Upload Resume (PDF)"
+    onDrop={handleFileDrop('resume')}
+    file={files.resume}
+    className="col-span-2"
+  />
+  {files.resume && (
+    <button
+      type="button"
+      onClick={() => handleRemoveFile('resume')}
+      className="text-xs text-red-500 mt-1 flex items-center gap-1"
+    >
+      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+      </svg>
+      Remove file
+    </button>
+  )}
+</FieldWrapper>
+
+<FieldWrapper fieldName="cnicFile" formData={formData} handleFieldVisibility={handleFieldVisibility}>
+  <FileUpload
+    label="Upload CNIC (Front & Back as PDF or Image)"
+    onDrop={handleFileDrop('cnicFile')}
+    file={files.cnicFile}
+    className="col-span-2"
+  />
+  {files.cnicFile && (
+    <button
+      type="button"
+      onClick={() => handleRemoveFile('cnicFile')}
+      className="text-xs text-red-500 mt-1 flex items-center gap-1"
+    >
+      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+      </svg>
+      Remove file
+    </button>
+  )}
+</FieldWrapper>
               </div>
 
               <div className="mt-4 pt-3 border-t border-gray-100">
@@ -655,6 +860,7 @@ const UserForm = () => {
                     options={SHIFT_PREFERENCES}
                     selectedOptions={formData.personal.shiftPreferences}
                     onChange={opt => handleCheckboxChange("shiftPreferences", opt)}
+                    fieldName="shiftPreferences"
                   />
                 </FieldWrapper>
               </div>
@@ -666,6 +872,7 @@ const UserForm = () => {
                     options={WORK_AUTHORIZATIONS}
                     selectedOptions={formData.personal.workAuthorization}
                     onChange={opt => handleCheckboxChange("workAuthorization", opt)}
+                    fieldName="workAuthorization"
                   />
                 </FieldWrapper>
               </div>
@@ -719,6 +926,7 @@ const UserForm = () => {
                           onChange={(e) => handleDynamicChange("education", index, e)}
                           options={DEGREE_TITLES}
                           defaultOption="Select Degree"
+                          fieldName={`education-${index}-degreeTitle`}
                         />
                       </FieldWrapper>
 
@@ -727,6 +935,7 @@ const UserForm = () => {
                           label="Start Date"
                           value={edu.startDate}
                           onChange={(date) => handleDynamicDateChange("education", index, "startDate", date)}
+                          fieldName={`education-${index}-startDate`}
                         />
                       </FieldWrapper>
 
@@ -735,6 +944,7 @@ const UserForm = () => {
                           label="End Date"
                           value={edu.endDate}
                           onChange={(date) => handleDynamicDateChange("education", index, "endDate", date)}
+                          fieldName={`education-${index}-endDate`}
                         />
                       </FieldWrapper>
                     </div>
@@ -748,6 +958,7 @@ const UserForm = () => {
                           onChange={(e) => handleDynamicChange("education", index, e)}
                           options={INSTITUTES}
                           defaultOption="Select Institute"
+                          fieldName={`education-${index}-institute`}
                         />
                       </FieldWrapper>
 
@@ -757,6 +968,7 @@ const UserForm = () => {
                           label="Institute Website" 
                           value={edu.website}
                           onChange={(e) => handleDynamicChange("education", index, e)}
+                          fieldName={`education-${index}-website`}
                         />
                       </FieldWrapper>
 
@@ -764,6 +976,7 @@ const UserForm = () => {
                         <FileUploadButton
                           label="Upload Degree"
                           onChange={(e) => handleDynamicFileChange("education", index, e)}
+                          fieldName={`education-${index}-degreeFile`}
                         />
                       </FieldWrapper>
                     </div>
@@ -829,6 +1042,7 @@ const UserForm = () => {
                           onChange={(e) => handleDynamicChange("experience", index, e)}
                           options={JOB_TITLES}
                           defaultOption="Select Job Title"
+                          fieldName={`experience-${index}-jobTitle`}
                         />
                       </FieldWrapper>
 
@@ -837,6 +1051,7 @@ const UserForm = () => {
                           label="Start Date"
                           value={exp.startDate}
                           onChange={(date) => handleDynamicDateChange("experience", index, "startDate", date)}
+                          fieldName={`experience-${index}-startDate`}
                         />
                       </FieldWrapper>
 
@@ -845,6 +1060,7 @@ const UserForm = () => {
                           label="End Date"
                           value={exp.endDate}
                           onChange={(date) => handleDynamicDateChange("experience", index, "endDate", date)}
+                          fieldName={`experience-${index}-endDate`}
                         />
                       </FieldWrapper>
 
@@ -856,6 +1072,7 @@ const UserForm = () => {
                           onChange={(e) => handleDynamicChange("experience", index, e)}
                           options={COMPANIES}
                           defaultOption="Select Company"
+                          fieldName={`experience-${index}-company`}
                         />
                       </FieldWrapper>
                     </div>
@@ -867,6 +1084,7 @@ const UserForm = () => {
                           label="Company Website"
                           value={exp.website}
                           onChange={(e) => handleDynamicChange("experience", index, e)}
+                          fieldName={`experience-${index}-website`}
                         />
                       </FieldWrapper>
 
@@ -874,6 +1092,7 @@ const UserForm = () => {
                         <FileUploadButton
                           label="Upload Experience Letter"
                           onChange={(e) => handleDynamicFileChange("experience", index, e)}
+                          fieldName={`experience-${index}-experienceFile`}
                         />
                       </FieldWrapper>
 
@@ -883,6 +1102,7 @@ const UserForm = () => {
                           options={JOB_FUNCTIONS}
                           selectedOptions={exp.jobFunctions}
                           onChange={(opt) => handleDynamicCheckboxChange("experience", index, "jobFunctions", opt)}
+                          fieldName={`experience-${index}-jobFunctions`}
                         />
                       </FieldWrapper>
 
@@ -894,6 +1114,7 @@ const UserForm = () => {
                           onChange={(e) => handleDynamicChange("experience", index, e)}
                           options={INDUSTRIES}
                           defaultOption="Select Industry"
+                          fieldName={`experience-${index}-industry`}
                         />
                       </FieldWrapper>
                     </div>
@@ -918,12 +1139,19 @@ const UserForm = () => {
           <div className="flex justify-center pt-4">
             <button
               type="submit"
-              className="px-6 py-2.5 bg-gradient-to-r from-[#f4793d] to-[#ff8748] text-white rounded hover:shadow transition-all text-sm font-semibold shadow flex items-center gap-1"
+              disabled={loading}
+              className={`px-6 py-2.5 bg-gradient-to-r from-[#f4793d] to-[#ff8748] text-white rounded hover:shadow transition-all text-sm font-semibold shadow flex items-center gap-1 ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-              Complete Profile
+              {loading ? (
+                'Submitting...'
+              ) : (
+                <>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  Complete Profile
+                </>
+              )}
             </button>
           </div>
         </form>

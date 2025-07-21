@@ -33,7 +33,6 @@ function App() {
         <Route path="/" element={<Form />} />
         <Route path="/create" element={<Newaccount />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/fone" element={<Home />} />
 
 
        <Route
