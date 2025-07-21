@@ -119,16 +119,16 @@ const Input = ({ label, name, value, onChange, required = false, type = "text", 
   return (
     <div className={`space-y-1 ${className}`}>
       <div className="flex items-center gap-1">
-        <label className="block text-xs font-semibold text-slate-700">
-          {label}
-          {required && <span className="text-red-500 ml-0.5">*</span>}
-        </label>
         <img 
-          src='/Images/silver.png'
+          src='/Images/silv.png'
           alt="Verified" 
           className="w-5 h-5 opacity-80"
           title="Verified field"
         />
+        <label className="block text-xs font-semibold text-slate-700">
+          {label}
+          {required && <span className="text-red-500 ml-0.5">*</span>}
+        </label>
       </div>
       <input
         type={type}
@@ -141,18 +141,20 @@ const Input = ({ label, name, value, onChange, required = false, type = "text", 
     </div>
   );
 };
+  
 
 const Select = ({ name, label, value, onChange, options, defaultOption, className = "", fieldName = "" }) => {
   return (
     <div className={`space-y-1 ${className}`}>
       <div className="flex items-center gap-1">
-        {label && <label className="block text-xs font-semibold text-slate-700">{label}</label>}
-        <img 
-          src='/Images/silver.png' 
+         <img 
+          src='/Images/silv.png' 
           alt="Verified" 
           className="w-5 h-5 opacity-80"
           title="Verified field"
         />
+        {label && <label className="block text-xs font-semibold text-slate-700">{label}</label>}
+       
       </div>
       <select
         name={name}
@@ -175,13 +177,14 @@ const DateInput = ({ label, value, onChange, className = "", fieldName = "" }) =
   return (
     <div className={`space-y-1 ${className}`}>
       <div className="flex items-center gap-1">
-        <label className="block text-xs font-semibold text-slate-700">{label}</label>
-        <img 
-          src='/Images/silver.png'
+           <img 
+          src='/Images/silv.png'
           alt="Verified" 
           className="w-5 h-5 opacity-80"
           title="Verified field"
         />
+        <label className="block text-xs font-semibold text-slate-700">{label}</label>
+     
       </div>
       <input
         type="date"
@@ -200,14 +203,16 @@ const CheckboxGroup = ({ legend, options, selectedOptions, onChange, className =
   return (
     <div className={`space-y-2 ${className}`}>
       <div className="flex items-center gap-1">
+        
         <legend className="text-xs font-semibold text-slate-700">{legend}</legend>
-        <img 
-          src='/Images/silver.png'
+       
+      </div>
+       <img 
+          src='/Images/silv.png'
           alt="Verified" 
           className="w-5 h-5 opacity-80"
           title="Verified field"
         />
-      </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
         {options.map((option) => (
           <label
@@ -232,13 +237,14 @@ const FileUploadButton = ({ label, onChange, className = "", fieldName = "" }) =
   return (
     <div className={`space-y-1 ${className}`}>
       <div className="flex items-center gap-1">
-        <label className="block text-xs font-semibold text-slate-700">{label}</label>
-        <img 
-          src='/Images/silver.png' 
+             <img 
+          src='/Images/silv.png' 
           alt="Verified" 
           className="w-5 h-5 opacity-80"
           title="Verified field"
         />
+        <label className="block text-xs font-semibold text-slate-700">{label}</label>
+   
       </div>
       <div className="relative">
         <input type="file" onChange={onChange} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
@@ -286,20 +292,26 @@ const VisibilityControl = ({ fieldName, currentVisibility, onChange }) => {
 
 // FieldWrapper component to combine field and visibility controls
 const FieldWrapper = ({ children, fieldName, formData, handleFieldVisibility }) => {
+  // Check if the field is CNIC and force visibility to "Hide"
+  const isCnicField = fieldName === 'cnic' || fieldName === 'CNIC';
+  const visibility = isCnicField 
+    ? "Hide" 
+    : formData.fieldVisibilities[fieldName] || "Public";
+
   return (
     <div>
       {children}
-      {fieldName && fieldName !== 'cnic' && (
+      {fieldName && fieldName !== '' && (
         <VisibilityControl 
           fieldName={fieldName}
-          currentVisibility={formData.fieldVisibilities[fieldName] || "Public"}
-          onChange={handleFieldVisibility}
+          currentVisibility={visibility}
+          onChange={isCnicField ? null : handleFieldVisibility} // Disable changes for CNIC
+          disabled={isCnicField} // Optional: disable the control for CNIC
         />
       )}
     </div>
   );
 };
-
 // Main Component
 const UserForm = () => {
   const location = useLocation();
@@ -545,16 +557,15 @@ const UserForm = () => {
                   />
                 </FieldWrapper>
 
-                <div>
-                  <Input
-                    label="CNIC"
-                    name="cnic"
-                    value={formData.personal.cnic}
-                    onChange={handlePersonalChange}
-                    required
-                  />
-                  {/* No visibility options for CNIC */}
-                </div>
+                <FieldWrapper fieldName="cnic" formData={formData} handleFieldVisibility={handleFieldVisibility}>
+  <Input
+    label="CNIC"
+    name="cnic"
+    value={formData.personal.cnic}
+    onChange={handlePersonalChange}
+    required
+  />
+</FieldWrapper>
 
                 <FieldWrapper fieldName="fatherName" formData={formData} handleFieldVisibility={handleFieldVisibility}>
                   <Input
