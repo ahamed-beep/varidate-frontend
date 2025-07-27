@@ -427,11 +427,12 @@ const [formData, setFormData] = useState({
   }],
 });
 
-  const [files, setFiles] = useState({ resume: null, profilePicture: null });
+const [files, setFiles] = useState({ 
+  resume: null, 
+  profilePicture: null 
+});
   const [selectedPreset, setSelectedPreset] = useState("");
-const [values, setValues] = useState({ jobFunction: [] });
-const [shiftPreference, setShiftPreference] = useState([]);
-const [workAuthorization, setWorkAuthorization] = useState([]);
+
   useEffect(() => {
     if (profile) {
       const transformedProfile = {
@@ -507,41 +508,31 @@ const [workAuthorization, setWorkAuthorization] = useState([]);
     }
   }, [error]);
 
-  const handleFileDrop = (field) => (acceptedFiles) => {
-    if (acceptedFiles && acceptedFiles.length > 0) {
-      if (field === 'profilePicture') {
-        const imageFile = acceptedFiles.find(file => 
-          file.type.startsWith('image/')
-        );
-        if (imageFile) {
-          setFiles(prev => ({
-            ...prev,
-            [field]: imageFile
-          }));
-        }
-      } else {
-        setFiles(prev => ({
-          ...prev,
-          [field]: acceptedFiles[0]
-        }));
-      }
+const handleFileDrop = (field) => (acceptedFiles) => {
+  if (acceptedFiles && acceptedFiles.length > 0) {
+    const file = acceptedFiles[0];
+    
+    // Validate file types
+    if (field === 'profilePicture' && !file.type.startsWith('image/')) {
+      toast.error('Please upload an image file for profile picture');
+      return;
     }
-  };
+    
+    if (field === 'resume' && file.type !== 'application/pdf') {
+      toast.error('Please upload a PDF file for resume');
+      return;
+    }
 
-  const handleShiftChange = (newValue) => {
-  setShiftPreference(newValue); // Could be array or string depending on UI
+    setFiles(prev => ({
+      ...prev,
+      [field]: file // This should be the actual File object
+    }));
+  }
 };
 
-const handleWorkAuthorizationChange = (newValue) => {
-  setWorkAuthorization(newValue);
-};
 
-const handleJobFunctionChange = (selectedOptions) => {
-  setValues(prev => ({
-    ...prev,
-    jobFunction: selectedOptions,
-  }));
-};
+
+
 
   const handleRemoveFile = (field) => {
     setFiles(prev => ({
@@ -621,21 +612,23 @@ const handleJobFunctionChange = (selectedOptions) => {
     }));
   };
 
-  const handleCheckboxChange = (group, option) => {
-    setFormData(prev => {
-      const currentSelection = prev.personal[group];
-      const newSelection = currentSelection.includes(option)
-        ? currentSelection.filter(item => item !== option)
-        : [...currentSelection, option];
-      return { 
-        ...prev, 
-        personal: { 
-          ...prev.personal, 
-          [group]: newSelection 
-        } 
-      };
-    });
-  };
+ const handleCheckboxChange = (group, option) => {
+  setFormData(prev => {
+    const currentSelection = prev.personal[group] || [];
+    const newSelection = currentSelection.includes(option)
+      ? currentSelection.filter(item => item !== option)
+      : [...currentSelection, option];
+    
+    return { 
+      ...prev, 
+      personal: { 
+        ...prev.personal, 
+        [group]: newSelection 
+      } 
+    };
+  });
+};
+
 
   const handleDynamicChange = (section, index, e) => {
     const { name, value } = e.target;
@@ -662,14 +655,14 @@ const handleDynamicDateChange = (section, index, field, date) => {
     setFormData(prev => ({ ...prev, [section]: updated }));
   };
 
-  const handleDynamicCheckboxChange = (section, index, field, option) => {
-    const updated = [...formData[section]];
-    const options = updated[index][field] || [];
-    updated[index][field] = options.includes(option) 
-      ? options.filter(o => o !== option) 
-      : [...options, option];
-    setFormData(prev => ({ ...prev, [section]: updated }));
-  };
+ const handleDynamicCheckboxChange = (section, index, field, option) => {
+  const updated = [...formData[section]];
+  const options = updated[index][field] || [];
+  updated[index][field] = options.includes(option) 
+    ? options.filter(o => o !== option) 
+    : [...options, option];
+  setFormData(prev => ({ ...prev, [section]: updated }));
+};
 
   const addNewEntry = (section) => {
     const newItem = section === "education"
@@ -695,184 +688,123 @@ const handleDynamicDateChange = (section, index, field, date) => {
     }));
   };
 
+// Update the handleSubmit function in UserForm.js
+// Update the handleSubmit function in UserForm.js
 const handleSubmit = async (e) => {
   e.preventDefault();
 
   try {
-    // Validate required fields
-    const requiredFields = {
-      name: 'Full name',
-      email: 'Email',
-      cnic: 'CNIC',
-      fatherName: 'Father name',
-      dob: 'Date of birth',
-      gender: 'Gender',
-      mobile: 'Mobile number',
-      city: 'City',
-      country: 'Country'
-    };
-
-    const missingFields = Object.entries(requiredFields)
-      .filter(([field]) => !formData.personal[field])
-      .map(([_, label]) => label);
-
-    if (missingFields.length > 0) {
-      throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
+    // Validate required files
+    if (!files.profilePicture || !files.resume) {
+      toast.error('Please upload both profile picture and resume');
+      return;
     }
 
-    // Validate files
-    if (!files.resume) throw new Error('Please upload your resume');
-    if (!files.profilePicture) throw new Error('Please upload your profile picture');
-
-    // Validate education
-    formData.education.forEach((edu, index) => {
-      if (!edu.degreeTitle || !edu.institute || !edu.startDate) {
-        throw new Error(`Education #${index + 1}: Please fill all required fields`);
+    // Validate education files
+    for (const edu of formData.education) {
+      if (!edu.degreeFile) {
+        toast.error(`Please upload degree file for education: ${edu.degreeTitle}`);
+        return;
       }
-    });
+    }
 
-    // Validate experience
-    formData.experience.forEach((exp, index) => {
-      if (!exp.jobTitle || !exp.company || !exp.industry || !exp.startDate) {
-        throw new Error(`Experience #${index + 1}: Please fill all required fields`);
+    // Validate experience files
+    for (const exp of formData.experience) {
+      if (!exp.experienceFile) {
+        toast.error(`Please upload experience file for: ${exp.jobTitle} at ${exp.company}`);
+        return;
       }
-    });
+    }
 
     const formDataToSend = new FormData();
     const userId = localStorage.getItem("userId");
-    if (!userId) throw new Error("User authentication required");
-
     formDataToSend.append("userId", userId);
 
-    // Add personal info with visibility
+    // Add personal info including arrays
     Object.entries(formData.personal).forEach(([field, value]) => {
       if (value !== null && value !== undefined) {
         if (field === 'dob' && value) {
           formDataToSend.append(field, value.toISOString());
         } else if (Array.isArray(value)) {
-          value.forEach(item => formDataToSend.append(`${field}[]`, item));
+          // Handle arrays properly - shiftPreferences and workAuthorization
+          value.forEach((item, index) => {
+            formDataToSend.append(`${field}[${index}]`, item);
+          });
         } else {
           formDataToSend.append(field, value);
         }
-        
-        // Add visibility field
-        const visibility = formData.fieldVisibilities[field] || 'Public';
-        formDataToSend.append(`${field}Visibility`, visibility);
       }
     });
 
-    // Add files with visibility
+    // Add files
     formDataToSend.append('profilePicture', files.profilePicture);
-    formDataToSend.append('profilePictureVisibility', formData.fieldVisibilities['profilePicture'] || 'Public');
-    
     formDataToSend.append('resume', files.resume);
-    formDataToSend.append('resumeVisibility', formData.fieldVisibilities['resume'] || 'Public');
 
-    // Add education with proper visibility fields
+    // Add education entries
     formData.education.forEach((edu, index) => {
-      const prefix = `education[${index}]`;
-      
-      // Add all education fields
-      formDataToSend.append(`${prefix}[degreeTitle]`, edu.degreeTitle);
-      formDataToSend.append(`${prefix}[institute]`, edu.institute);
-      formDataToSend.append(`${prefix}[startDate]`, edu.startDate?.toISOString());
-      formDataToSend.append(`${prefix}[endDate]`, edu.endDate?.toISOString());
-      formDataToSend.append(`${prefix}[website]`, edu.website || '');
-      
-      if (edu.degreeFile) {
-        formDataToSend.append(`${prefix}[degreeFile]`, edu.degreeFile);
-      }
-
-      // Add visibility for each education field from fieldVisibilities
-      const educationFields = ['degreeTitle', 'institute', 'startDate', 'endDate', 'website', 'degreeFile'];
-      educationFields.forEach(field => {
-        const visibilityKey = `education-${index}-${field}`;
-        const visibility = formData.fieldVisibilities[visibilityKey] || 'Public';
-        formDataToSend.append(`${prefix}[${field}Visibility]`, visibility);
-      });
-
-      // Add default badge settings
-      formDataToSend.append(`${prefix}[degreeTitleBadge]`, "Black");
-      formDataToSend.append(`${prefix}[degreeTitleBadgeScore]`, "0");
-      formDataToSend.append(`${prefix}[instituteBadge]`, "Black");
-      formDataToSend.append(`${prefix}[instituteBadgeScore]`, "0");
-      formDataToSend.append(`${prefix}[startDateBadge]`, "Black");
-      formDataToSend.append(`${prefix}[startDateBadgeScore]`, "0");
-      formDataToSend.append(`${prefix}[endDateBadge]`, "Black");
-      formDataToSend.append(`${prefix}[endDateBadgeScore]`, "0");
-      formDataToSend.append(`${prefix}[degreeFileBadge]`, "Black");
-      formDataToSend.append(`${prefix}[degreeFileBadgeScore]`, "0");
-      formDataToSend.append(`${prefix}[websiteBadge]`, "Black");
-      formDataToSend.append(`${prefix}[websiteBadgeScore]`, "0");
+      formDataToSend.append(`education[${index}][degreeTitle]`, edu.degreeTitle);
+      formDataToSend.append(`education[${index}][institute]`, edu.institute);
+      formDataToSend.append(`education[${index}][startDate]`, edu.startDate?.toISOString());
+      formDataToSend.append(`education[${index}][endDate]`, edu.endDate?.toISOString());
+      formDataToSend.append(`education[${index}][website]`, edu.website || '');
+      formDataToSend.append(`education[${index}][degreeFile]`, edu.degreeFile);
     });
 
-    // Add experience with proper visibility fields
+    // Add experience entries
     formData.experience.forEach((exp, index) => {
-      const prefix = `experience[${index}]`;
+      formDataToSend.append(`experience[${index}][jobTitle]`, exp.jobTitle);
+      formDataToSend.append(`experience[${index}][company]`, exp.company);
+      formDataToSend.append(`experience[${index}][startDate]`, exp.startDate?.toISOString());
+      formDataToSend.append(`experience[${index}][endDate]`, exp.endDate?.toISOString());
+      formDataToSend.append(`experience[${index}][website]`, exp.website || '');
+      formDataToSend.append(`experience[${index}][industry]`, exp.industry);
       
-      // Add all experience fields
-      formDataToSend.append(`${prefix}[jobTitle]`, exp.jobTitle);
-      formDataToSend.append(`${prefix}[company]`, exp.company);
-      formDataToSend.append(`${prefix}[startDate]`, exp.startDate?.toISOString());
-      formDataToSend.append(`${prefix}[endDate]`, exp.endDate?.toISOString());
-      formDataToSend.append(`${prefix}[website]`, exp.website || '');
-      formDataToSend.append(`${prefix}[industry]`, exp.industry);
-      
-      if (exp.experienceFile) {
-        formDataToSend.append(`${prefix}[experienceFile]`, exp.experienceFile);
+      // Properly handle jobFunctions array
+      if (exp.jobFunctions && exp.jobFunctions.length > 0) {
+        exp.jobFunctions.forEach((func, funcIndex) => {
+          formDataToSend.append(`experience[${index}][jobFunctions][${funcIndex}]`, func);
+        });
       }
 
-      // Add job functions
-      exp.jobFunctions?.forEach(func => {
-        formDataToSend.append(`${prefix}[jobFunctions][]`, func);
-      });
-
-      // Add visibility for each experience field from fieldVisibilities
-      const experienceFields = ['jobTitle', 'company', 'startDate', 'endDate', 'website', 'experienceFile', 'jobFunctions', 'industry'];
-      experienceFields.forEach(field => {
-        const visibilityKey = `experience-${index}-${field}`;
-        const visibility = formData.fieldVisibilities[visibilityKey] || 'Public';
-        formDataToSend.append(`${prefix}[${field}Visibility]`, visibility);
-      });
-
-      // Add default badge settings
-      formDataToSend.append(`${prefix}[jobTitleBadge]`, "Black");
-      formDataToSend.append(`${prefix}[jobTitleBadgeScore]`, "0");
-      formDataToSend.append(`${prefix}[companyBadge]`, "Black");
-      formDataToSend.append(`${prefix}[companyBadgeScore]`, "0");
-      formDataToSend.append(`${prefix}[startDateBadge]`, "Black");
-      formDataToSend.append(`${prefix}[startDateBadgeScore]`, "0");
-      formDataToSend.append(`${prefix}[endDateBadge]`, "Black");
-      formDataToSend.append(`${prefix}[endDateBadgeScore]`, "0");
-      formDataToSend.append(`${prefix}[jobFunctionsBadge]`, "Black");
-      formDataToSend.append(`${prefix}[jobFunctionsBadgeScore]`, "0");
-      formDataToSend.append(`${prefix}[industryBadge]`, "Black");
-      formDataToSend.append(`${prefix}[industryBadgeScore]`, "0");
-      formDataToSend.append(`${prefix}[websiteBadge]`, "Black");
-      formDataToSend.append(`${prefix}[websiteBadgeScore]`, "0");
-      formDataToSend.append(`${prefix}[experienceFileBadge]`, "Black");
-      formDataToSend.append(`${prefix}[experienceFileBadgeScore]`, "0");
+      formDataToSend.append(`experience[${index}][experienceFile]`, exp.experienceFile);
     });
 
-    const endpoint = profile ? '/profile/update' : '/profile';
-    const method = profile ? 'put' : 'post';
+    // Debug: Log the form data before submission
+    console.log('🔍 Form Submission Debug Info');
+    console.log('User ID:', userId);
+    console.log('Personal Info:', formData.personal);
+    console.log('Shift Preferences:', formData.personal.shiftPreferences);
+    console.log('Work Authorization:', formData.personal.workAuthorization);
+    console.log('Education:', formData.education);
+    console.log('Experience:', formData.experience);
+    console.log('Files:', files);
 
-    const response = await axiosinstance[method](endpoint, formDataToSend, {
+    // Log FormData entries
+    console.log('FormData entries:');
+    for (let pair of formDataToSend.entries()) {
+      console.log(`${pair[0]}:`, pair[1]);
+    }
+
+    // Submit the form
+    const response = await axiosinstance.post('/profile', formDataToSend, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
     });
 
-    if (response) {
-      toast.success(`Profile ${profile ? 'updated' : 'created'} successfully`);
-      if (!profile) {
-        navigate('/success');
-      }
+    if (response.data.success) {
+      toast.success('Profile submitted successfully!');
+      navigate('/success');
+    } else {
+      toast.error(response.data.message || 'Failed to submit profile');
     }
-
   } catch (error) {
     console.error('Submission error:', error);
-    toast.error(error.message || 'Failed to submit profile');
+    const errorMsg = error.response?.data?.message || 
+                    error.response?.data?.error || 
+                    error.message || 
+                    'Failed to submit profile';
+    toast.error(errorMsg);
   }
 };
   return (
