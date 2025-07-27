@@ -10,25 +10,30 @@ function Login() {
   const navigate = useNavigate();
 
 const fromhandler = async (e) => {
-    e.preventDefault();
-    const data = { email, password };
+  e.preventDefault();
+  const data = { email, password };
 
-    try {
-      const response = await dispatch(loginuserform(data));
-  if (response?.payload?.message === 'Login successful.') {
-  const { email, firstname, lastname } = response.payload.user;
+  try {
+    const response = await dispatch(loginuserform(data));
 
-  localStorage.setItem('isLoggedIn', 'true');
-  localStorage.setItem('userEmail', email);
-  localStorage.setItem('userName', `${firstname} ${lastname}`);
+    if (response?.payload?.message === 'Login successful.') {
+     const { id, email, firstname, lastname } = response.payload.user;
 
-  navigate('/admin');
-}
 
-    } catch (error) {
-      // handled by toast
+      // ✅ Store in localStorage
+      localStorage.setItem('isLoggedIn', 'true');
+      localStorage.setItem('userEmail', email);
+      localStorage.setItem('userName', `${firstname} ${lastname}`);
+      localStorage.setItem('userId', id); 
+      
+
+      navigate('/admin');
     }
-  };
+
+  } catch (error) {
+    // handled by toast
+  }
+};
 
   return (
     <div className="min-h-screen bg-white px-5 md:px-16 py-10">

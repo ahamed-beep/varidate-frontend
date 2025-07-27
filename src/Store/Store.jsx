@@ -1,28 +1,21 @@
+// store.js
 import { configureStore, combineReducers } from "@reduxjs/toolkit";
-import storage from "redux-persist/lib/storage";
-import { persistReducer, persistStore } from "redux-persist";
 import profileReducer from "../Redux/Profile";
 import authReducer from "../Redux/Auth";
 
-const persistConfig = {
-  key: "root",
-  storage,
-};
-
+// Combine your reducers
 const rootReducer = combineReducers({
   auth: authReducer,
   profile: profileReducer,
 });
 
-const persistedReducer = persistReducer(persistConfig, rootReducer);
-
+// Configure store without redux-persist
 const store = configureStore({
-  reducer: persistedReducer,
+  reducer: rootReducer,
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
       serializableCheck: false,
     }),
 });
 
-export const persistor = persistStore(store);
 export default store;

@@ -1,13 +1,13 @@
-"use client"
-
 import { useState, useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { resetProfileState, submitProfile } from "../Redux/profile";
+import { fetchProfileById, resetProfileState, submitProfile } from "../Redux/profile";
 import axiosinstance from "../Connection/Api";
 import { useDropzone } from "react-dropzone";
+import { toast } from "react-toastify";
 
-// Constants with Pakistani details
 const COUNTRIES = ["Pakistan", "India", "China", "USA", "UK", "UAE", "Canada", "Other"];
 const GENDERS = ["Male", "Female", "Other"];
 const MARITAL_STATUSES = ["Single", "Married", "Divorced", "Widowed"];
@@ -81,7 +81,7 @@ const JOB_FUNCTIONS = [
   "Finance",
   "Operations"
 ];
-const VISIBILITY_PRESETS = ["Public", "Link", "Hide"];
+const VISIBILITY_PRESETS = ["Public", "Private", "Hide"];
 const VERIFICATION_LEVELS = ["Silver", "Gold", "Platinum"];
 
 // Templates
@@ -108,22 +108,21 @@ const newExperienceTemplate = {
 };
 
 // Components
-
-
-const FileUpload = ({ label, onDrop, file, className = "" }) => {
+const FileUpload = ({ label, onDrop, file, className = "", disabled = false }) => {
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: {
       'application/pdf': ['.pdf'],
       'image/*': ['.png', '.jpg', '.jpeg']
     },
-    maxFiles: 1
+    maxFiles: 1,
+    disabled
   });
 
   return (
     <div className={`space-y-1 ${className}`}>
       <div className="flex items-center gap-1">
-        <VerificationBadge level="Silver" />
+        <img src="https://i.pinimg.com/564x/29/9d/4e/299d4e690b6a9557188e5c64644f5acd.jpg" alt="tick" className="w-4 h-4" />
         <label className="block text-xs font-semibold text-slate-700">
           {label}
           <span className="text-red-500 ml-0.5">*</span>
@@ -132,7 +131,8 @@ const FileUpload = ({ label, onDrop, file, className = "" }) => {
       <div 
         {...getRootProps()} 
         className={`border-2 border-dashed rounded-md p-4 text-center cursor-pointer 
-          ${isDragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300'}`}
+          ${isDragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300'}
+          ${disabled ? 'bg-gray-100 cursor-not-allowed' : ''}`}
       >
         <input {...getInputProps()} />
         {file ? (
@@ -144,7 +144,7 @@ const FileUpload = ({ label, onDrop, file, className = "" }) => {
           </div>
         ) : (
           <div>
-            <p className="text-sm text-gray-600">
+            <p className={`text-sm ${disabled ? 'text-gray-500' : 'text-gray-600'}`}>
               {isDragActive ? 'Drop the file here' : 'Drag & drop a file here, or click to select'}
             </p>
             <p className="text-xs text-gray-500 mt-1">PDF, PNG, JPG (Max 5MB)</p>
@@ -184,11 +184,11 @@ const VerificationBadge = ({ level }) => {
   );
 };
 
-const Input = ({ label, name, value, onChange, required = false, type = "text", className = "", fieldName = "" }) => {
+const Input = ({ label, name, value, onChange, required = false, type = "text", className = "", disabled = false }) => {
   return (
     <div className={`space-y-1 ${className}`}>
       <div className="flex items-center gap-1">
-        <VerificationBadge level="Silver" />
+        <img src="https://i.pinimg.com/564x/29/9d/4e/299d4e690b6a9557188e5c64644f5acd.jpg" alt="tick" className="w-4 h-4" />
         <label className="block text-xs font-semibold text-slate-700">
           {label}
           {required && <span className="text-red-500 ml-0.5">*</span>}
@@ -200,24 +200,30 @@ const Input = ({ label, name, value, onChange, required = false, type = "text", 
         value={value}
         onChange={onChange}
         required={required}
-        className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md focus:ring-1 focus:ring-[#f4793d] focus:border-[#f4793d] transition-colors bg-white text-slate-900"
+        disabled={disabled}
+        className={`w-full px-3 py-2 text-sm border border-slate-300 rounded-md focus:ring-1 focus:ring-[#f4793d] focus:border-[#f4793d] transition-colors bg-white text-slate-900 ${
+          disabled ? 'bg-gray-100 cursor-not-allowed' : ''
+        }`}
       />
     </div>
   );
 };
 
-const Select = ({ name, label, value, onChange, options, defaultOption, className = "", fieldName = "" }) => {
+const Select = ({ name, label, value, onChange, options, defaultOption, className = "", disabled = false }) => {
   return (
     <div className={`space-y-1 ${className}`}>
       <div className="flex items-center gap-1">
-        <VerificationBadge level="Silver" />
+        <img src="https://i.pinimg.com/564x/29/9d/4e/299d4e690b6a9557188e5c64644f5acd.jpg" alt="tick" className="w-4 h-4" />
         {label && <label className="block text-xs font-semibold text-slate-700">{label}</label>}
       </div>
       <select
         name={name}
         value={value}
         onChange={onChange}
-        className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md focus:ring-1 focus:ring-[#f4793d] focus:border-[#f4793d] transition-colors bg-white text-slate-900"
+        disabled={disabled}
+        className={`w-full px-3 py-2 text-sm border border-slate-300 rounded-md focus:ring-1 focus:ring-[#f4793d] focus:border-[#f4793d] transition-colors bg-white text-slate-900 ${
+          disabled ? 'bg-gray-100 cursor-not-allowed' : ''
+        }`}
       >
         {defaultOption && <option value="">{defaultOption}</option>}
         {options.map((option) => (
@@ -230,53 +236,55 @@ const Select = ({ name, label, value, onChange, options, defaultOption, classNam
   );
 };
 
-const DateInput = ({ label, value, onChange, className = "", fieldName = "" }) => {
-  const formatDateForInput = (date) => {
-    if (!date) return '';
-    const d = new Date(date);
-    if (isNaN(d.getTime())) return '';
-    return d.toISOString().split('T')[0];
-  };
-
+const DateInput = ({ label, value, onChange, className = "", disabled = false }) => {
   return (
     <div className={`space-y-1 ${className}`}>
       <div className="flex items-center gap-1">
-        <VerificationBadge level="Silver" />
+        <img src="https://i.pinimg.com/564x/29/9d/4e/299d4e690b6a9557188e5c64644f5acd.jpg" alt="tick" className="w-4 h-4" />
         <label className="block text-xs font-semibold text-slate-700">{label}</label>
       </div>
-      <input
-        type="date"
-        value={formatDateForInput(value)}
-        onChange={(e) => {
-          const date = e.target.value ? new Date(e.target.value) : null;
-          onChange(date);
-        }}
-        className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md focus:ring-1 focus:ring-[#f4793d] focus:border-[#f4793d] transition-colors bg-white text-slate-900"
+      <DatePicker
+        selected={value}
+        onChange={date => onChange(date)}
+        dateFormat="yyyy-MM-dd"
+        className={`w-full px-3 py-2 text-sm border border-slate-300 rounded-md focus:ring-1 focus:ring-[#f4793d] focus:border-[#f4793d] transition-colors bg-white text-slate-900 ${
+          disabled ? 'bg-gray-100 cursor-not-allowed' : ''
+        }`}
+        disabled={disabled}
+        placeholderText="Select date"
+        showMonthDropdown
+        showYearDropdown
+        dropdownMode="select"
       />
     </div>
   );
 };
 
-const CheckboxGroup = ({ legend, options, selectedOptions, onChange, className = "", fieldName = "" }) => {
+const CheckboxGroup = ({ legend, options, selectedOptions, onChange, className = "", disabled = false }) => {
   return (
     <div className={`space-y-2 ${className}`}>
       <div className="flex items-center gap-1">
-        <VerificationBadge level="Silver" />
+        <img src="https://i.pinimg.com/564x/29/9d/4e/299d4e690b6a9557188e5c64644f5acd.jpg" alt="tick" className="w-4 h-4" />
         <legend className="text-xs font-semibold text-slate-700">{legend}</legend>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
         {options.map((option) => (
           <label
             key={option}
-            className="flex items-center gap-2 cursor-pointer p-2 rounded border border-slate-200 hover:bg-slate-50 transition-colors"
+            className={`flex items-center gap-2 p-2 rounded border border-slate-200 transition-colors ${
+              disabled ? 'cursor-not-allowed bg-gray-100' : 'cursor-pointer hover:bg-slate-50'
+            }`}
           >
             <input
               type="checkbox"
               checked={selectedOptions.includes(option)}
-              onChange={() => onChange(option)}
-              className="w-3.5 h-3.5 text-[#f4793d] border-gray-300 rounded focus:ring-[#f4793d]"
+              onChange={() => !disabled && onChange(option)}
+              disabled={disabled}
+              className={`w-3.5 h-3.5 text-[#f4793d] border-gray-300 rounded focus:ring-[#f4793d] ${
+                disabled ? 'cursor-not-allowed' : ''
+              }`}
             />
-            <span className="text-xs text-slate-700">{option}</span>
+            <span className={`text-xs ${disabled ? 'text-gray-500' : 'text-slate-700'}`}>{option}</span>
           </label>
         ))}
       </div>
@@ -284,16 +292,26 @@ const CheckboxGroup = ({ legend, options, selectedOptions, onChange, className =
   );
 };
 
-const FileUploadButton = ({ label, onChange, className = "", fieldName = "" }) => {
+const FileUploadButton = ({ label, onChange, className = "", disabled = false }) => {
   return (
     <div className={`space-y-1 ${className}`}>
       <div className="flex items-center gap-1">
-        <VerificationBadge level="Silver" />
+        <img src="https://i.pinimg.com/564x/29/9d/4e/299d4e690b6a9557188e5c64644f5acd.jpg" alt="tick" className="w-4 h-4" />
         <label className="block text-xs font-semibold text-slate-700">{label}</label>
       </div>
       <div className="relative">
-        <input type="file" onChange={onChange} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
-        <div className="w-full px-3 py-2 border border-dashed border-slate-300 rounded-md hover:border-[#f4793d] transition-colors bg-slate-50 text-center">
+        <input 
+          type="file" 
+          onChange={!disabled ? onChange : undefined}
+          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" 
+          accept=".pdf,.png,.jpg,.jpeg"
+          disabled={disabled}
+        />
+        <div className={`w-full px-3 py-2 border border-dashed rounded-md transition-colors text-center ${
+          disabled 
+            ? 'bg-gray-100 border-gray-300 cursor-not-allowed' 
+            : 'border-slate-300 bg-slate-50 cursor-pointer hover:border-[#f4793d]'
+        }`}>
           <div className="flex items-center justify-center gap-1">
             <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
@@ -303,7 +321,7 @@ const FileUploadButton = ({ label, onChange, className = "", fieldName = "" }) =
                 d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
               />
             </svg>
-            <span className="text-xs text-slate-600">Upload file</span>
+            <span className={`text-xs ${disabled ? 'text-gray-500' : 'text-slate-600'}`}>Upload file</span>
           </div>
         </div>
       </div>
@@ -311,22 +329,27 @@ const FileUploadButton = ({ label, onChange, className = "", fieldName = "" }) =
   );
 };
 
-const VisibilityControl = ({ fieldName, currentVisibility, onChange }) => {
+const VisibilityControl = ({ fieldName, currentVisibility, onChange, disabled = false }) => {
   return (
     <div className="flex flex-col gap-1 mt-1 p-2 rounded bg-slate-50">
       <span className="text-xs font-medium text-slate-600">Visibility:</span>
       <div className="flex gap-2">
         {VISIBILITY_PRESETS.map((option) => (
-          <label key={option} className="flex items-center gap-1 text-xs cursor-pointer">
+          <label key={option} className={`flex items-center gap-1 text-xs ${
+            disabled ? 'cursor-not-allowed text-gray-500' : 'cursor-pointer'
+          }`}>
             <input
               type="radio"
               name={`vis-${fieldName}`}
               value={option}
               checked={currentVisibility === option}
-              onChange={() => onChange(fieldName, option)}
-              className="w-3 h-3 text-[#f4793d] border-gray-300 focus:ring-[#f4793d]"
+              onChange={() => !disabled && onChange(fieldName, option)}
+              disabled={disabled}
+              className={`w-3 h-3 text-[#f4793d] border-gray-300 focus:ring-[#f4793d] ${
+                disabled ? 'cursor-not-allowed' : ''
+              }`}
             />
-            <span className="text-slate-700">{option}</span>
+            <span className={`${disabled ? 'text-gray-500' : 'text-slate-700'}`}>{option}</span>
           </label>
         ))}
       </div>
@@ -334,21 +357,18 @@ const VisibilityControl = ({ fieldName, currentVisibility, onChange }) => {
   );
 };
 
-const FieldWrapper = ({ children, fieldName, formData, handleFieldVisibility }) => {
-  const isCnicField = fieldName === 'cnic' || fieldName === 'CNIC';
-  const visibility = isCnicField 
-    ? "Hide" 
-    : formData.fieldVisibilities[fieldName] || "Public";
+const FieldWrapper = ({ children, fieldName, formData, handleFieldVisibility, isCnicField = false, disabled = false }) => {
+  const visibility = formData.fieldVisibilities[fieldName] || "Private";
 
   return (
     <div>
       {children}
-      {fieldName && fieldName !== '' && (
+      {fieldName && !isCnicField && (
         <VisibilityControl 
           fieldName={fieldName}
           currentVisibility={visibility}
-          onChange={isCnicField ? null : handleFieldVisibility}
-          disabled={isCnicField}
+          onChange={handleFieldVisibility}
+          disabled={disabled}
         />
       )}
     </div>
@@ -356,106 +376,224 @@ const FieldWrapper = ({ children, fieldName, formData, handleFieldVisibility }) 
 };
 
 const UserForm = () => {
-  const location = useLocation();
-  const loggedInEmail = location.state?.email || "";
+   const location = useLocation();
   const dispatch = useDispatch();
+  const navigate = useNavigate();
+
+
+ 
+
+const userEmail = localStorage.getItem('userEmail') || '';
+const firstName = localStorage.getItem('firstName') || '';
+const lastName = localStorage.getItem('lastName') || '';
+
   const { loading, error, success, profile } = useSelector(state => state.profile);
 
-  const [formData, setFormData] = useState({
-    personal: {
-      name: "",
-      mobile: "",
-      email: loggedInEmail,
-      cnic: "",
-      fatherName: "",
-      city: "",
-      country: "Pakistan",
-      gender: "",
-      maritalStatus: "",
-      residentStatus: "",
-      shiftPreferences: [],
-      workLocationPreference: "",
-      dob: null,
-      nationality: "Pakistan",
-      workAuthorization: [],
-    },
-    fieldVisibilities: {},
-    education: [{ ...newEducationTemplate, id: Date.now().toString() }],
-    experience: [{ ...newExperienceTemplate, id: Date.now().toString() }],
-  });
-
-  const [files, setFiles] = useState({
-  resume: null,
-  cnicFile: null
+const [formData, setFormData] = useState({
+  personal: {
+    name: `${firstName} ${lastName}`.trim(),
+    mobile: "",
+    email: userEmail || "",
+    cnic: "",
+    fatherName: "",
+    city: "",
+    country: "",
+    gender: "",
+    maritalStatus: "",
+    residentStatus: "",
+    shiftPreferences: [],
+    workLocationPreference: "",
+    dob: null,
+    nationality: "",
+    workAuthorization: [],
+  },
+  fieldVisibilities: {},
+  education: [{ 
+    ...newEducationTemplate, 
+    id: Date.now().toString(),
+    degreeTitle: "",
+    institute: "",
+    startDate: null,
+    endDate: null
+  }],
+  experience: [{ 
+    ...newExperienceTemplate, 
+    id: Date.now().toString(),
+    jobTitle: "",
+    company: "",
+    startDate: null,
+    endDate: null,
+    industry: ""
+  }],
 });
 
-const handleFileDrop = (field) => (acceptedFiles) => {
-  if (acceptedFiles && acceptedFiles.length > 0) {
-    setFiles(prev => ({
-      ...prev,
-      [field]: acceptedFiles[0]
-    }));
-  }
-};
-
-const handleRemoveFile = (field) => {
-  setFiles(prev => ({
-    ...prev,
-    [field]: null
-  }));
-};
-
+  const [files, setFiles] = useState({ resume: null, profilePicture: null });
   const [selectedPreset, setSelectedPreset] = useState("");
+const [values, setValues] = useState({ jobFunction: [] });
+const [shiftPreference, setShiftPreference] = useState([]);
+const [workAuthorization, setWorkAuthorization] = useState([]);
+  useEffect(() => {
+    if (profile) {
+      const transformedProfile = {
+        personal: {
+          name: profile.name || "",
+          mobile: profile.mobile || "",
+             email: profile.email || userEmail,
+          cnic: profile.cnic || "",
+          fatherName: profile.fatherName || "",
+          city: profile.city || "",
+          country: profile.country || "Pakistan",
+          gender: profile.gender || "",
+          maritalStatus: profile.maritalStatus || "",
+          residentStatus: profile.residentStatus || "",
+          shiftPreferences: profile.shiftPreferences || [],
+          workLocationPreference: profile.workLocationPreference || "",
+          dob: profile.dob ? new Date(profile.dob) : null,
+          nationality: profile.nationality || "Pakistan",
+          workAuthorization: profile.workAuthorization || [],
+        },
+        fieldVisibilities: profile.fieldVisibilities || {},
+        education: profile.education?.length > 0 
+          ? profile.education.map(edu => ({
+              ...edu,
+              id: edu.id || Date.now().toString(),
+              startDate: edu.startDate ? new Date(edu.startDate) : null,
+              endDate: edu.endDate ? new Date(edu.endDate) : null,
+              degreeFile: null
+            }))
+          : [{ ...newEducationTemplate, id: Date.now().toString() }],
+        experience: profile.experience?.length > 0 
+          ? profile.experience.map(exp => ({
+              ...exp,
+              id: exp.id || Date.now().toString(),
+              startDate: exp.startDate ? new Date(exp.startDate) : null,
+              endDate: exp.endDate ? new Date(exp.endDate) : null,
+              experienceFile: null,
+              jobFunctions: exp.jobFunctions || []
+            }))
+          : [{ ...newExperienceTemplate, id: Date.now().toString() }],
+      };
+
+      setFormData(transformedProfile);
+      
+      if (profile.resumeUrl) {
+        setFiles(prev => ({
+          ...prev,
+          resume: { name: "resume.pdf" }
+        }));
+      }
+      if (profile.profilePictureUrl) {
+        setFiles(prev => ({
+          ...prev,
+          profilePicture: { name: "profile.jpg" }
+        }));
+      }
+    }
+}, [profile, userEmail]);
 
   useEffect(() => {
     if (success) {
-      console.log("Profile submitted successfully!");
+      toast.success("Profile submitted successfully!");
       dispatch(resetProfileState());
     }
   }, [success, dispatch]);
 
   useEffect(() => {
-  if (error) {
-    // Check if error is an object with message property
-    const errorMessage = error.message || 
-                        error.error || 
-                        JSON.stringify(error);
-    console.log(`Error: ${errorMessage}`);
-  }
+    if (error) {
+      const errorMessage = error.message || 
+                          error.error || 
+                          JSON.stringify(error);
+      toast.error(`Error: ${errorMessage}`);
+    }
   }, [error]);
+
+  const handleFileDrop = (field) => (acceptedFiles) => {
+    if (acceptedFiles && acceptedFiles.length > 0) {
+      if (field === 'profilePicture') {
+        const imageFile = acceptedFiles.find(file => 
+          file.type.startsWith('image/')
+        );
+        if (imageFile) {
+          setFiles(prev => ({
+            ...prev,
+            [field]: imageFile
+          }));
+        }
+      } else {
+        setFiles(prev => ({
+          ...prev,
+          [field]: acceptedFiles[0]
+        }));
+      }
+    }
+  };
+
+  const handleShiftChange = (newValue) => {
+  setShiftPreference(newValue); // Could be array or string depending on UI
+};
+
+const handleWorkAuthorizationChange = (newValue) => {
+  setWorkAuthorization(newValue);
+};
+
+const handleJobFunctionChange = (selectedOptions) => {
+  setValues(prev => ({
+    ...prev,
+    jobFunction: selectedOptions,
+  }));
+};
+
+  const handleRemoveFile = (field) => {
+    setFiles(prev => ({
+      ...prev,
+      [field]: null
+    }));
+  };
 
   const applyVisibilityPreset = (preset) => {
     const newFieldVisibilities = {};
-    
-    const allFields = [
-      ...Object.keys(formData.personal).filter(field => !Array.isArray(formData.personal[field])),
-      'dob',
-      ...formData.education.flatMap((edu, index) => [
-        `education-${index}-degreeTitle`,
-        `education-${index}-startDate`,
-        `education-${index}-endDate`,
-        `education-${index}-institute`,
-        `education-${index}-website`,
-        `education-${index}-degreeFile`
-      ]),
-      ...formData.experience.flatMap((exp, index) => [
-        `experience-${index}-jobTitle`,
-        `experience-${index}-startDate`,
-        `experience-${index}-endDate`,
-        `experience-${index}-company`,
-        `experience-${index}-website`,
-        `experience-${index}-experienceFile`,
-        `experience-${index}-jobFunctions`,
-        `experience-${index}-industry`
-      ])
-    ];
-
-    allFields.forEach(field => {
-      if (field !== 'cnic') {
+    // Add all personal fields except cnic
+    Object.keys(formData.personal).forEach(field => {
+      if (field !== 'cnic' && !field.includes('cnic')) {
         newFieldVisibilities[field] = preset;
       }
     });
-
+    // Add resume and profilePicture
+    newFieldVisibilities['resume'] = preset;
+    newFieldVisibilities['profilePicture'] = preset;
+    // Add shiftPreferences and workAuthorization
+    newFieldVisibilities['shiftPreferences'] = preset;
+    newFieldVisibilities['workAuthorization'] = preset;
+    // Add dob
+    newFieldVisibilities['dob'] = preset;
+    // Add education fields
+    formData.education.forEach((edu, index) => {
+      [
+        'degreeTitle',
+        'startDate',
+        'endDate',
+        'institute',
+        'website',
+        'degreeFile'
+      ].forEach(field => {
+        newFieldVisibilities[`education-${index}-${field}`] = preset;
+      });
+    });
+    // Add experience fields
+    formData.experience.forEach((exp, index) => {
+      [
+        'jobTitle',
+        'startDate',
+        'endDate',
+        'company',
+        'website',
+        'experienceFile',
+        'jobFunctions',
+        'industry'
+      ].forEach(field => {
+        newFieldVisibilities[`experience-${index}-${field}`] = preset;
+      });
+    });
     setFormData(prev => ({
       ...prev,
       fieldVisibilities: newFieldVisibilities
@@ -506,17 +644,21 @@ const handleRemoveFile = (field) => {
     setFormData(prev => ({ ...prev, [section]: updated }));
   };
 
-  const handleDynamicDateChange = (section, index, field, date) => {
-    const updated = [...formData[section]];
-    updated[index][field] = date;
-    setFormData(prev => ({ ...prev, [section]: updated }));
-  };
+const handleDynamicDateChange = (section, index, field, date) => {
+  const updated = [...formData[section]];
+  updated[index][field] = date;
+  setFormData(prev => ({ ...prev, [section]: updated }));
+};
 
   const handleDynamicFileChange = (section, index, e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
     const updated = [...formData[section]];
-    updated[index][section === "education" ? "degreeFile" : "experienceFile"] = file;
+    // Remove file if e.target.files is empty or not present
+    if (!e.target.files || e.target.files.length === 0) {
+      updated[index][section === "education" ? "degreeFile" : "experienceFile"] = null;
+    } else {
+      const file = e.target.files[0];
+      updated[index][section === "education" ? "degreeFile" : "experienceFile"] = file;
+    }
     setFormData(prev => ({ ...prev, [section]: updated }));
   };
 
@@ -537,60 +679,125 @@ const handleRemoveFile = (field) => {
   };
 
   const removeDynamicItem = (section, id) => {
-    setFormData(prev => ({ ...prev, [section]: prev[section].filter(item => item.id !== id) }));
+    setFormData(prev => ({ 
+      ...prev, 
+      [section]: prev[section].filter(item => item.id !== id) 
+    }));
   };
 
   const handleFieldVisibility = (field, value) => {
     setFormData(prev => ({
       ...prev,
-      fieldVisibilities: { ...prev.fieldVisibilities, [field]: value },
+      fieldVisibilities: {
+        ...prev.fieldVisibilities,
+        [field]: value
+      }
     }));
   };
 
 const handleSubmit = async (e) => {
   e.preventDefault();
+// Add this at the start of handleSubmit
+const requiredFields = [
+  'name', 'email', 'cnic', 'fatherName', 'dob', 'gender', 'mobile'
+];
+const missingFields = requiredFields.filter(field => !formData.personal[field]);
 
-  if (!files.resume || !files.cnicFile) {
-    alert('Please upload both resume and CNIC files');
+if (missingFields.length > 0) {
+  toast.error(`Missing required fields: ${missingFields.join(', ')}`);
+  return;
+}
+
+for (const [index, edu] of formData.education.entries()) {
+  if (!edu.degreeTitle || !edu.institute) {
+    toast.error(`Education ${index + 1} is missing required fields`);
+    return;
+  }
+}
+
+for (const [index, exp] of formData.experience.entries()) {
+  if (!exp.jobTitle || !exp.company) {
+    toast.error(`Experience ${index + 1} is missing required fields`);
+    return;
+  }
+}
+
+  if (!files.resume || !files.profilePicture) {
+    toast.error('Please upload both resume and profile picture');
     return;
   }
 
   const formDataToSend = new FormData();
+  const userId = localStorage.getItem("userId");
+  
+  if (!userId) {
+    toast.error("User not logged in or missing userId.");
+    return;
+  }
 
-  // Append personal info
+  if (!files.profilePicture) {
+  toast.error('Please upload a profile picture');
+  return;
+}
+  formDataToSend.append("userId", userId);
+
   Object.entries(formData.personal).forEach(([key, value]) => {
-    if (key === 'dob' && value) {
-      formDataToSend.append(key, value.toISOString());
-    } else if (Array.isArray(value)) {
-      value.forEach(item => formDataToSend.append(key, item));
-    } else if (value !== null && value !== undefined) {
-      formDataToSend.append(key, value);
+    if (value !== null && value !== undefined) {
+      if (key === 'dob' && value) {
+        formDataToSend.append(key, value.toISOString());
+      } else if (Array.isArray(value)) {
+        value.forEach(item => formDataToSend.append(`${key}[]`, item));
+      } else {
+        formDataToSend.append(key, value);
+      }
     }
   });
 
-  // Append main files
-  formDataToSend.append('resume', files.resume);
-  formDataToSend.append('cnicFile', files.cnicFile);
 
-  // Append education data
+formData.education.forEach((edu, index) => {
+  if (edu.startDate && edu.endDate && edu.endDate < edu.startDate) {
+    toast.error(`Education ${index + 1} end date cannot be before start date`);
+    return;
+  }
+});
+
+formData.experience.forEach((exp, index) => {
+  if (exp.startDate && exp.endDate && exp.endDate < exp.startDate) {
+    toast.error(`Experience ${index + 1} end date cannot be before start date`);
+    return;
+  }
+});
+  formDataToSend.append('profilePicture', files.profilePicture);
+  formDataToSend.append('resume', files.resume);
+
   formData.education.forEach((edu, index) => {
     Object.entries(edu).forEach(([field, value]) => {
       if (field !== 'id' && field !== 'degreeFile' && value !== null && value !== undefined) {
-        formDataToSend.append(`education[${index}][${field}]`, value);
+        if (field.includes('Date') && value) {
+          formDataToSend.append(`education[${index}][${field}]`, value.toISOString());
+        } else {
+          formDataToSend.append(`education[${index}][${field}]`, value);
+        }
       }
     });
 
-    // ✅ Correct field name expected by multer
     if (edu.degreeFile) {
-      formDataToSend.append('degreeFiles', edu.degreeFile);
+      formDataToSend.append(`education[${index}][degreeFile]`, edu.degreeFile);
     }
   });
 
-  // Append experience data
+formData.experience.forEach((exp, index) => {
+  if (exp.startDate && exp.endDate && exp.endDate < exp.startDate) {
+    throw new Error(`Experience ${index + 1} end date cannot be before start date`);
+  }
+});
+
   formData.experience.forEach((exp, index) => {
     Object.entries(exp).forEach(([field, value]) => {
       if (field !== 'id' && field !== 'experienceFile' && value !== null && value !== undefined) {
-        if (Array.isArray(value)) {
+        if (field.includes('Date') && value) {
+          formDataToSend.append(`experience[${index}][${field}]`, value.toISOString());
+        } else if (Array.isArray(value)) {
           value.forEach(item => formDataToSend.append(`experience[${index}][${field}][]`, item));
         } else {
           formDataToSend.append(`experience[${index}][${field}]`, value);
@@ -598,27 +805,45 @@ const handleSubmit = async (e) => {
       }
     });
 
-    // ✅ Correct field name expected by multer
     if (exp.experienceFile) {
-      formDataToSend.append('experienceFiles', exp.experienceFile);
+      formDataToSend.append(`experience[${index}][experienceFile]`, exp.experienceFile);
     }
   });
 
+  for (let [key, value] of formDataToSend.entries()) {
+    console.log(key, value);
+  }
+
   try {
-    const response = await axiosinstance.post('/profile', formDataToSend, {
+    const endpoint = profile ? '/profile/update' : '/profile';
+    const method = profile ? 'put' : 'post';
+
+    const response = await axiosinstance[method](endpoint, formDataToSend, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
     });
-    console.log('Profile created successfully', response.data);
+
+    if (response) {
+      toast.success(`Profile ${profile ? 'updated' : 'created'} successfully`);
+      if (!profile) {
+        navigate('/success');
+      }
+    }
   } catch (err) {
-    console.error('Error submitting profile:', err.response?.data || err.message);
+    console.error('Submission error:', err);
+    if (err.response?.data?.errors) {
+      err.response.data.errors.forEach(error => {
+        toast.error(error.message || error);
+      });
+    } else {
+      toast.error(`Error submitting profile: ${err.response?.data?.message || err.message}`);
+    }
   }
 };
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Header */}
       <div className="bg-white text-gray-900 py-4 shadow-sm border-b border-gray-100">
         <div className="max-w-6xl mx-auto px-3">
           <div className="flex-col md:flex-row md:flex justify-between items-center">
@@ -632,10 +857,11 @@ const handleSubmit = async (e) => {
                 <h1 className="text-lg font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-[#f4793d] to-[#ff8748]">
                   Professional Profile
                 </h1>
-                <p className="text-gray-500 text-xs mt-1">Complete your profile</p>
+                <p className="text-gray-500 text-xs mt-1">
+                  Complete your profile
+                </p>
               </div>
             </div>
-            
             <div className="flex items-center mt-7 md:mt-0 gap-2">
               <div className="space-y-1 w-48">
                 <label className="block text-xs font-semibold text-slate-700">Visibility Preset</label>
@@ -653,6 +879,7 @@ const handleSubmit = async (e) => {
               </div>
               <button
                 onClick={handleApplyPreset}
+                disabled={!selectedPreset}
                 className="px-3 py-1.5 bg-[#f4793d] text-white rounded hover:bg-[#e66e33] mt-5 text-sm font-medium"
               >
                 Apply
@@ -664,7 +891,6 @@ const handleSubmit = async (e) => {
 
       <div className="max-w-6xl mx-auto px-3 py-4">
         <form className="space-y-6" onSubmit={handleSubmit}>
-          {/* Personal Information */}
           <Section
             icon={
               <div className="bg-gradient-to-r from-gray-100 to-indigo-100 p-1.5 rounded-lg">
@@ -677,29 +903,40 @@ const handleSubmit = async (e) => {
           >
             <div className="bg-white rounded-lg p-3 shadow border border-gray-100">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FieldWrapper fieldName="name" formData={formData} handleFieldVisibility={handleFieldVisibility}>
+                <FieldWrapper 
+                  fieldName="name" 
+                  formData={formData} 
+                  handleFieldVisibility={handleFieldVisibility}
+                >
                   <Input
                     label="Name"
                     name="name"
                     value={formData.personal.name}
                     onChange={handlePersonalChange}
                     required
-                    fieldName="name"
+                 
                   />
                 </FieldWrapper>
 
-                <FieldWrapper fieldName="mobile" formData={formData} handleFieldVisibility={handleFieldVisibility}>
+                <FieldWrapper 
+                  fieldName="mobile" 
+                  formData={formData} 
+                  handleFieldVisibility={handleFieldVisibility}
+                >
                   <Input
                     label="Mobile"
                     name="mobile"
                     value={formData.personal.mobile}
                     onChange={handlePersonalChange}
                     required
-                    fieldName="mobile"
                   />
                 </FieldWrapper>
 
-                <FieldWrapper fieldName="email" formData={formData} handleFieldVisibility={handleFieldVisibility}>
+                <FieldWrapper 
+                  fieldName="email" 
+                  formData={formData} 
+                  handleFieldVisibility={handleFieldVisibility}
+                >
                   <Input
                     label="Email"
                     name="email"
@@ -707,55 +944,74 @@ const handleSubmit = async (e) => {
                     onChange={handlePersonalChange}
                     type="email"
                     required
-                    fieldName="email"
+                
                   />
                 </FieldWrapper>
 
-                <FieldWrapper fieldName="cnic" formData={formData} handleFieldVisibility={handleFieldVisibility}>
+                <FieldWrapper 
+                  fieldName="cnic" 
+                  formData={formData} 
+                  handleFieldVisibility={handleFieldVisibility} 
+                  isCnicField
+                >
                   <Input
                     label="CNIC"
                     name="cnic"
                     value={formData.personal.cnic}
                     onChange={handlePersonalChange}
                     required
-                    fieldName="cnic"
                   />
                 </FieldWrapper>
 
-                <FieldWrapper fieldName="fatherName" formData={formData} handleFieldVisibility={handleFieldVisibility}>
+                <FieldWrapper 
+                  fieldName="fatherName" 
+                  formData={formData} 
+                  handleFieldVisibility={handleFieldVisibility}
+                >
                   <Input
                     label="Father Name"
                     name="fatherName"
                     value={formData.personal.fatherName}
                     onChange={handlePersonalChange}
                     required
-                    fieldName="fatherName"
                   />
                 </FieldWrapper>
 
-                <FieldWrapper fieldName="city" formData={formData} handleFieldVisibility={handleFieldVisibility}>
+                <FieldWrapper 
+                  fieldName="city" 
+                  formData={formData} 
+                  handleFieldVisibility={handleFieldVisibility}
+                >
                   <Input
                     label="City"
                     name="city"
                     value={formData.personal.city}
                     onChange={handlePersonalChange}
                     required
-                    fieldName="city"
                   />
                 </FieldWrapper>
 
-                <FieldWrapper fieldName="country" formData={formData} handleFieldVisibility={handleFieldVisibility}>
-                  <Select
-                    name="country"
-                    label="Country"
-                    value={formData.personal.country}
-                    onChange={handlePersonalChange}
-                    options={COUNTRIES}
-                    fieldName="country"
-                  />
-                </FieldWrapper>
+              <FieldWrapper 
+  fieldName="country" 
+  formData={formData} 
+  handleFieldVisibility={handleFieldVisibility}
+>
+  <Select
+    name="country"
+    label="Country"
+    value={formData.personal.country}
+    onChange={handlePersonalChange}
+    options={COUNTRIES}
+    defaultOption="Select Country"
+    required
+  />
+</FieldWrapper>
 
-                <FieldWrapper fieldName="gender" formData={formData} handleFieldVisibility={handleFieldVisibility}>
+                <FieldWrapper 
+                  fieldName="gender" 
+                  formData={formData} 
+                  handleFieldVisibility={handleFieldVisibility}
+                >
                   <Select
                     name="gender"
                     label="Gender"
@@ -763,11 +1019,14 @@ const handleSubmit = async (e) => {
                     onChange={handlePersonalChange}
                     options={GENDERS}
                     defaultOption="Select Gender"
-                    fieldName="gender"
                   />
                 </FieldWrapper>
 
-                <FieldWrapper fieldName="maritalStatus" formData={formData} handleFieldVisibility={handleFieldVisibility}>
+                <FieldWrapper 
+                  fieldName="maritalStatus" 
+                  formData={formData} 
+                  handleFieldVisibility={handleFieldVisibility}
+                >
                   <Select
                     name="maritalStatus"
                     label="Marital Status"
@@ -775,11 +1034,14 @@ const handleSubmit = async (e) => {
                     onChange={handlePersonalChange}
                     options={MARITAL_STATUSES}
                     defaultOption="Select Marital Status"
-                    fieldName="maritalStatus"
                   />
                 </FieldWrapper>
 
-                <FieldWrapper fieldName="residentStatus" formData={formData} handleFieldVisibility={handleFieldVisibility}>
+                <FieldWrapper 
+                  fieldName="residentStatus" 
+                  formData={formData} 
+                  handleFieldVisibility={handleFieldVisibility}
+                >
                   <Select
                     name="residentStatus"
                     label="Resident Status"
@@ -787,99 +1049,119 @@ const handleSubmit = async (e) => {
                     onChange={handlePersonalChange}
                     options={RESIDENT_STATUSES}
                     defaultOption="Select Resident Status"
-                    fieldName="residentStatus"
                   />
                 </FieldWrapper>
 
-                <FieldWrapper fieldName="nationality" formData={formData} handleFieldVisibility={handleFieldVisibility}>
+                <FieldWrapper 
+                  fieldName="nationality" 
+                  formData={formData} 
+                  handleFieldVisibility={handleFieldVisibility}
+                >
                   <Input
                     label="Nationality"
                     name="nationality"
                     value={formData.personal.nationality}
                     onChange={handlePersonalChange}
-                    fieldName="nationality"
                   />
                 </FieldWrapper>
 
-                <FieldWrapper fieldName="dob" formData={formData} handleFieldVisibility={handleFieldVisibility}>
+                <FieldWrapper 
+                  fieldName="dob" 
+                  formData={formData} 
+                  handleFieldVisibility={handleFieldVisibility}
+                >
                   <DateInput
                     label="Date of Birth"
                     value={formData.personal.dob}
                     onChange={handleDobChange}
-                    fieldName="dob"
                   />
                 </FieldWrapper>
-                {/* Add these right before the closing </div> of the grid in Personal Information */}
-<FieldWrapper fieldName="resume" formData={formData} handleFieldVisibility={handleFieldVisibility}>
-  <FileUpload
-    label="Upload Resume (PDF)"
-    onDrop={handleFileDrop('resume')}
-    file={files.resume}
-    className="col-span-2"
-  />
-  {files.resume && (
-    <button
-      type="button"
-      onClick={() => handleRemoveFile('resume')}
-      className="text-xs text-red-500 mt-1 flex items-center gap-1"
-    >
-      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-      </svg>
-      Remove file
-    </button>
-  )}
-</FieldWrapper>
 
-<FieldWrapper fieldName="cnicFile" formData={formData} handleFieldVisibility={handleFieldVisibility}>
-  <FileUpload
-    label="Upload CNIC (Front & Back as PDF or Image)"
-    onDrop={handleFileDrop('cnicFile')}
-    file={files.cnicFile}
-    className="col-span-2"
-  />
-  {files.cnicFile && (
-    <button
-      type="button"
-      onClick={() => handleRemoveFile('cnicFile')}
-      className="text-xs text-red-500 mt-1 flex items-center gap-1"
-    >
-      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-      </svg>
-      Remove file
-    </button>
-  )}
-</FieldWrapper>
+                <FieldWrapper 
+                  fieldName="resume" 
+                  formData={formData} 
+                  handleFieldVisibility={handleFieldVisibility}
+                >
+                  <FileUpload
+                    label="Upload Resume (PDF)"
+                    onDrop={handleFileDrop('resume')}
+                    file={files.resume}
+                    className="col-span-2"
+                  />
+                  {files.resume && (
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveFile('resume')}
+                      className="text-xs mt-1 flex items-center gap-1 text-red-500"
+                    >
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                      Remove file
+                    </button>
+                  )}
+                </FieldWrapper>
+
+                <FieldWrapper 
+                  fieldName="profilePicture" 
+                  formData={formData} 
+                  handleFieldVisibility={handleFieldVisibility}
+                >
+                  <FileUpload
+                    label="Upload Profile Picture (Image)"
+                    onDrop={handleFileDrop('profilePicture')}
+                    file={files.profilePicture}
+                    className="col-span-2"
+                    accept="image/*"
+                  />
+                  {files.profilePicture && (
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveFile('profilePicture')}
+                      className="text-xs mt-1 flex items-center gap-1 text-red-500"
+                    >
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                      Remove file
+                    </button>
+                  )}
+                </FieldWrapper>
               </div>
 
               <div className="mt-4 pt-3 border-t border-gray-100">
-                <FieldWrapper fieldName="shiftPreferences" formData={formData} handleFieldVisibility={handleFieldVisibility}>
+                <FieldWrapper 
+                  fieldName="shiftPreferences" 
+                  formData={formData} 
+                  handleFieldVisibility={handleFieldVisibility}
+                >
                   <CheckboxGroup
                     legend="Shift Preferences"
                     options={SHIFT_PREFERENCES}
                     selectedOptions={formData.personal.shiftPreferences}
                     onChange={opt => handleCheckboxChange("shiftPreferences", opt)}
-                    fieldName="shiftPreferences"
                   />
                 </FieldWrapper>
               </div>
 
               <div className="mt-4 pt-3 border-t border-gray-100">
-                <FieldWrapper fieldName="workAuthorization" formData={formData} handleFieldVisibility={handleFieldVisibility}>
+                <FieldWrapper 
+                  fieldName="workAuthorization" 
+                  formData={formData} 
+                  handleFieldVisibility={handleFieldVisibility}
+                >
                   <CheckboxGroup
                     legend="Work Authorization"
                     options={WORK_AUTHORIZATIONS}
                     selectedOptions={formData.personal.workAuthorization}
                     onChange={opt => handleCheckboxChange("workAuthorization", opt)}
-                    fieldName="workAuthorization"
                   />
                 </FieldWrapper>
               </div>
             </div>
           </Section>
 
-          {/* Education */}
+       
           <Section 
             title="Education" 
             icon={
@@ -918,7 +1200,11 @@ const handleSubmit = async (e) => {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <FieldWrapper fieldName={`education-${index}-degreeTitle`} formData={formData} handleFieldVisibility={handleFieldVisibility}>
+                      <FieldWrapper 
+                        fieldName={`education-${index}-degreeTitle`} 
+                        formData={formData} 
+                        handleFieldVisibility={handleFieldVisibility}
+                      >
                         <Select
                           name="degreeTitle"
                           label="Degree Title"
@@ -926,58 +1212,90 @@ const handleSubmit = async (e) => {
                           onChange={(e) => handleDynamicChange("education", index, e)}
                           options={DEGREE_TITLES}
                           defaultOption="Select Degree"
-                          fieldName={`education-${index}-degreeTitle`}
                         />
                       </FieldWrapper>
 
-                      <FieldWrapper fieldName={`education-${index}-startDate`} formData={formData} handleFieldVisibility={handleFieldVisibility}>
+                      <FieldWrapper 
+                        fieldName={`education-${index}-startDate`} 
+                        formData={formData} 
+                        handleFieldVisibility={handleFieldVisibility}
+                      >
                         <DateInput
                           label="Start Date"
                           value={edu.startDate}
                           onChange={(date) => handleDynamicDateChange("education", index, "startDate", date)}
-                          fieldName={`education-${index}-startDate`}
                         />
                       </FieldWrapper>
 
-                      <FieldWrapper fieldName={`education-${index}-endDate`} formData={formData} handleFieldVisibility={handleFieldVisibility}>
+                      <FieldWrapper 
+                        fieldName={`education-${index}-endDate`} 
+                        formData={formData} 
+                        handleFieldVisibility={handleFieldVisibility}
+                      >
                         <DateInput
                           label="End Date"
                           value={edu.endDate}
                           onChange={(date) => handleDynamicDateChange("education", index, "endDate", date)}
-                          fieldName={`education-${index}-endDate`}
                         />
                       </FieldWrapper>
                     </div>
 
                     <div className="space-y-2">
-                      <FieldWrapper fieldName={`education-${index}-institute`} formData={formData} handleFieldVisibility={handleFieldVisibility}>
-                        <Select
-                          name="institute"
-                          label="Institute"
-                          value={edu.institute}
-                          onChange={(e) => handleDynamicChange("education", index, e)}
-                          options={INSTITUTES}
-                          defaultOption="Select Institute"
-                          fieldName={`education-${index}-institute`}
-                        />
-                      </FieldWrapper>
+                 
+<FieldWrapper 
+  fieldName={`education-${index}-institute`} 
+  formData={formData} 
+  handleFieldVisibility={handleFieldVisibility}
+>
+  <Select
+    name="institute"
+    label="Institute"
+    value={edu.institute}
+    onChange={(e) => handleDynamicChange("education", index, e)}
+    options={INSTITUTES}
+    defaultOption="Select Institute"
+    required
+  />
+</FieldWrapper>
 
-                      <FieldWrapper fieldName={`education-${index}-website`} formData={formData} handleFieldVisibility={handleFieldVisibility}>
+
+
+                      <FieldWrapper 
+                        fieldName={`education-${index}-website`} 
+                        formData={formData} 
+                        handleFieldVisibility={handleFieldVisibility}
+                      >
                         <Input
                           name="website"
                           label="Institute Website" 
                           value={edu.website}
                           onChange={(e) => handleDynamicChange("education", index, e)}
-                          fieldName={`education-${index}-website`}
                         />
                       </FieldWrapper>
 
-                      <FieldWrapper fieldName={`education-${index}-degreeFile`} formData={formData} handleFieldVisibility={handleFieldVisibility}>
-                        <FileUploadButton
-                          label="Upload Degree"
-                          onChange={(e) => handleDynamicFileChange("education", index, e)}
-                          fieldName={`education-${index}-degreeFile`}
+                      <FieldWrapper 
+                        fieldName={`education-${index}-degreeFile`} 
+                        formData={formData} 
+                        handleFieldVisibility={handleFieldVisibility}
+                      >
+                        <FileUpload
+                          label="Upload Degree (PDF/Image)"
+                          onDrop={acceptedFiles => handleDynamicFileChange("education", index, { target: { files: acceptedFiles } })}
+                          file={edu.degreeFile}
+                          className="col-span-2"
                         />
+                        {edu.degreeFile && (
+                          <button
+                            type="button"
+                            onClick={() => handleDynamicFileChange("education", index, { target: { files: [] } })}
+                            className="text-xs mt-1 flex items-center gap-1 text-red-500"
+                          >
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                            Remove file
+                          </button>
+                        )}
                       </FieldWrapper>
                     </div>
                   </div>
@@ -997,7 +1315,7 @@ const handleSubmit = async (e) => {
             </div>
           </Section>
 
-          {/* Experience */}
+          
           <Section 
             title="Experience" 
             icon={
@@ -1034,7 +1352,11 @@ const handleSubmit = async (e) => {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <FieldWrapper fieldName={`experience-${index}-jobTitle`} formData={formData} handleFieldVisibility={handleFieldVisibility}>
+                      <FieldWrapper 
+                        fieldName={`experience-${index}-jobTitle`} 
+                        formData={formData} 
+                        handleFieldVisibility={handleFieldVisibility}
+                      >
                         <Select
                           name="jobTitle"
                           label="Job Title"
@@ -1042,71 +1364,96 @@ const handleSubmit = async (e) => {
                           onChange={(e) => handleDynamicChange("experience", index, e)}
                           options={JOB_TITLES}
                           defaultOption="Select Job Title"
-                          fieldName={`experience-${index}-jobTitle`}
                         />
                       </FieldWrapper>
 
-                      <FieldWrapper fieldName={`experience-${index}-startDate`} formData={formData} handleFieldVisibility={handleFieldVisibility}>
+                      <FieldWrapper 
+                        fieldName={`experience-${index}-startDate`} 
+                        formData={formData} 
+                        handleFieldVisibility={handleFieldVisibility}
+                      >
                         <DateInput
                           label="Start Date"
                           value={exp.startDate}
                           onChange={(date) => handleDynamicDateChange("experience", index, "startDate", date)}
-                          fieldName={`experience-${index}-startDate`}
                         />
                       </FieldWrapper>
 
-                      <FieldWrapper fieldName={`experience-${index}-endDate`} formData={formData} handleFieldVisibility={handleFieldVisibility}>
+                      <FieldWrapper 
+                        fieldName={`experience-${index}-endDate`} 
+                        formData={formData} 
+                        handleFieldVisibility={handleFieldVisibility}
+                      >
                         <DateInput
                           label="End Date"
                           value={exp.endDate}
                           onChange={(date) => handleDynamicDateChange("experience", index, "endDate", date)}
-                          fieldName={`experience-${index}-endDate`}
                         />
                       </FieldWrapper>
 
-                      <FieldWrapper fieldName={`experience-${index}-company`} formData={formData} handleFieldVisibility={handleFieldVisibility}>
-                        <Select
-                          name="company"
-                          label="Company"
-                          value={exp.company}
-                          onChange={(e) => handleDynamicChange("experience", index, e)}
-                          options={COMPANIES}
-                          defaultOption="Select Company"
-                          fieldName={`experience-${index}-company`}
-                        />
-                      </FieldWrapper>
+                 <FieldWrapper 
+  fieldName={`experience-${index}-company`} 
+  formData={formData} 
+  handleFieldVisibility={handleFieldVisibility}
+>
+  <Select
+    name="company"
+    label="Company"
+    value={exp.company}
+    onChange={(e) => handleDynamicChange("experience", index, e)}
+    options={COMPANIES}
+    defaultOption="Select Company"
+    required
+  />
+</FieldWrapper>
+
                     </div>
 
                     <div className="space-y-2">
-                      <FieldWrapper fieldName={`experience-${index}-website`} formData={formData} handleFieldVisibility={handleFieldVisibility}>
+                      <FieldWrapper 
+                        fieldName={`experience-${index}-website`} 
+                        formData={formData} 
+                        handleFieldVisibility={handleFieldVisibility}
+                      >
                         <Input
                           name="website"
                           label="Company Website"
                           value={exp.website}
                           onChange={(e) => handleDynamicChange("experience", index, e)}
-                          fieldName={`experience-${index}-website`}
                         />
                       </FieldWrapper>
+<FieldWrapper 
+  fieldName={`experience-${index}-experienceFile`} 
+  formData={formData} 
+  handleFieldVisibility={handleFieldVisibility}
+>
+  <FileUpload
+    label="Upload Experience Letter (PDF only)"
+    onDrop={acceptedFiles => handleDynamicFileChange("experience", index, { target: { files: acceptedFiles } })}
+    file={exp.experienceFile}
+    className="col-span-2"
+    accept="application/pdf"
+  />
+</FieldWrapper>
 
-                      <FieldWrapper fieldName={`experience-${index}-experienceFile`} formData={formData} handleFieldVisibility={handleFieldVisibility}>
-                        <FileUploadButton
-                          label="Upload Experience Letter"
-                          onChange={(e) => handleDynamicFileChange("experience", index, e)}
-                          fieldName={`experience-${index}-experienceFile`}
-                        />
-                      </FieldWrapper>
-
-                      <FieldWrapper fieldName={`experience-${index}-jobFunctions`} formData={formData} handleFieldVisibility={handleFieldVisibility}>
+                      <FieldWrapper 
+                        fieldName={`experience-${index}-jobFunctions`} 
+                        formData={formData} 
+                        handleFieldVisibility={handleFieldVisibility}
+                      >
                         <CheckboxGroup
                           legend="Job Functions"
                           options={JOB_FUNCTIONS}
                           selectedOptions={exp.jobFunctions}
                           onChange={(opt) => handleDynamicCheckboxChange("experience", index, "jobFunctions", opt)}
-                          fieldName={`experience-${index}-jobFunctions`}
                         />
                       </FieldWrapper>
 
-                      <FieldWrapper fieldName={`experience-${index}-industry`} formData={formData} handleFieldVisibility={handleFieldVisibility}>
+                      <FieldWrapper 
+                        fieldName={`experience-${index}-industry`} 
+                        formData={formData} 
+                        handleFieldVisibility={handleFieldVisibility}
+                      >
                         <Select
                           name="industry"
                           label="Industry"
@@ -1114,7 +1461,6 @@ const handleSubmit = async (e) => {
                           onChange={(e) => handleDynamicChange("experience", index, e)}
                           options={INDUSTRIES}
                           defaultOption="Select Industry"
-                          fieldName={`experience-${index}-industry`}
                         />
                       </FieldWrapper>
                     </div>
@@ -1135,12 +1481,13 @@ const handleSubmit = async (e) => {
             </div>
           </Section>
 
-          {/* Submit Button */}
           <div className="flex justify-center pt-4">
             <button
               type="submit"
               disabled={loading}
-              className={`px-6 py-2.5 bg-gradient-to-r from-[#f4793d] to-[#ff8748] text-white rounded hover:shadow transition-all text-sm font-semibold shadow flex items-center gap-1 ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
+              className={`px-6 py-2.5 bg-gradient-to-r from-[#f4793d] to-[#ff8748] text-white rounded hover:shadow transition-all text-sm font-semibold shadow flex items-center gap-1 ${
+                loading ? 'opacity-70 cursor-not-allowed' : ''
+              }`}
             >
               {loading ? (
                 'Submitting...'
@@ -1149,7 +1496,7 @@ const handleSubmit = async (e) => {
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
-                  Complete Profile
+                  {profile ? 'Update Profile' : 'Complete Profile'}
                 </>
               )}
             </button>

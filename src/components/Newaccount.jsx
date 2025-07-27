@@ -31,22 +31,38 @@ function Newaccount() {
     setShowPassword(!showPassword);
   };
 
-  const formhandler = async (e) => {
-    e.preventDefault();
-    
-    if (formData.password.length < 5) {
-      setPasswordError('Password must be at least 5 characters');
-      return;
-    }
+const formhandler = async (e) => {
+  e.preventDefault();
 
+  if (formData.password.length < 5) {
+    setPasswordError('Password must be at least 5 characters');
+    return;
+  }
+
+  try {
     const response = await dispatch(signupuserform(formData));
 
-    if (!response.error) {
-      navigate('/verify-email', { state: { email: formData.email } });
+    if (response.payload && !response.error) {
+      const { id, email, firstname, lastname } = response.payload;
+
+      // Save all user data in localStorage
+      localStorage.setItem('userId', id);
+      localStorage.setItem('userEmail', email);
+      localStorage.setItem('firstName', firstname);
+      localStorage.setItem('lastName', lastname);
+
+      navigate('/verify-email', { 
+        state: { email }
+      });
     } else {
-      toast.error("Signup failed.");
+      toast.error("Signup failed. Please try again.");
     }
-  };
+  } catch (error) {
+    console.error('Signup error:', error);
+    toast.error("An error occurred during signup.");
+  }
+};
+
 
   return (
     <div className="min-h-screen  py-12 px-4 sm:px-6 lg:px-8">

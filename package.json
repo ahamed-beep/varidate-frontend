@@ -16,6 +16,7 @@
     "@tailwindcss/vite": "^4.0.13",
     "axios": "^1.8.3",
     "embla-carousel-react": "^8.5.2",
+    "framer-motion": "^12.23.6",
     "heroicons": "^2.2.0",
     "keen-slider": "^6.8.6",
     "lucide-react": "^0.479.0",

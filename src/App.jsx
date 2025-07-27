@@ -9,7 +9,8 @@ import VerifyEmailCode from "./components/Verifyemail";
 import Userdashboard from "./components/UserDashboard";
 import ProtectedRoute from "./Protection/Protectroute";
 import ForgotPassword from "./components/ForgetPassword";
-import Home from "./components/UserForm";
+import SuccessMessage from "./components/SubmissionSuccess";
+import ProfileValidatorApp from "./components/Userprofiledetail";
 
 
 
@@ -32,6 +33,10 @@ function App() {
       <Routes>
         <Route path="/" element={<Form />} />
         <Route path="/create" element={<Newaccount />} />
+
+        
+        <Route path="/success" element={<SuccessMessage />} />
+<Route path="/profile/:id" element={<ProfileValidatorApp/>} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
 
 
@@ -46,7 +51,6 @@ function App() {
 
 
     
-
         
         <Route path="/verify-email" element={<VerifyEmailCode />} /> {/* Add this line */}
        
