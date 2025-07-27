@@ -167,7 +167,12 @@ const ProfileValidatorApp = () => {
     { label: 'Name', value: currentProfile.name, key: 'nameBadgeScore', badgeLevel: currentProfile.nameBadge },
     { label: "Father's Name", value: currentProfile.fatherName, key: 'fatherNameBadgeScore', badgeLevel: currentProfile.fatherNameBadge },
     { label: 'Gender', value: currentProfile.gender, key: 'genderBadgeScore', badgeLevel: currentProfile.genderBadge },
-    { label: 'Date of Birth', value: currentProfile.dob ? new Date(currentProfile.dob).toLocaleDateString() : '', key: 'dobBadgeScore', badgeLevel: currentProfile.dobBadge },
+  { 
+  label: 'Date of Birth', 
+  value: currentProfile.dob ? new Date(currentProfile.dob).toLocaleDateString() : '', 
+  key: 'dobBadgeScore', 
+  badgeLevel: currentProfile.dobBadge 
+},
     { label: 'CNIC', value: currentProfile.cnic, key: 'cnicBadgeScore', badgeLevel: currentProfile.cnicBadge },
   ];
 
@@ -318,24 +323,25 @@ const ProfileValidatorApp = () => {
                       isValidated={isValidated}
                       badgeLevel={getNestedBadge('experience', i, 'jobFunctions')}
                     />
-                    <InfoField 
-                      label="Period" 
-                      value={`${new Date(exp.startDate).toLocaleDateString()} - ${exp.endDate ? new Date(exp.endDate).toLocaleDateString() : 'Present'}`} 
-                      name={`exp-period-${i}`}
-                      feedback={feedback}
-                      onFeedbackChange={handleFeedbackChange}
-                      isValidated={isValidated}
-                      badgeLevel={getNestedBadge('experience', i, 'period')}
-                    />
-                    <InfoField 
-                      label="Verification Level" 
-                      value={exp.verificationLevel} 
-                      name={`exp-verificationLevel-${i}`}
-                      feedback={feedback}
-                      onFeedbackChange={handleFeedbackChange}
-                      isValidated={isValidated}
-                      badgeLevel={exp.verificationLevel === 'Silver' ? 'Silver' : 'Black'}
-                    />
+                  <InfoField 
+  label="Start Date" 
+  value={new Date(exp.startDate).toLocaleDateString()} 
+  name={`exp-startDate-${i}`}
+  feedback={feedback}
+  onFeedbackChange={handleFeedbackChange}
+  isValidated={isValidated}
+  badgeLevel={getNestedBadge('experience', i, 'startDate')}
+/>
+<InfoField 
+  label="End Date" 
+  value={exp.endDate ? new Date(exp.endDate).toLocaleDateString() : 'Present'} 
+  name={`exp-endDate-${i}`}
+  feedback={feedback}
+  onFeedbackChange={handleFeedbackChange}
+  isValidated={isValidated}
+  badgeLevel={getNestedBadge('experience', i, 'endDate')}
+/>
+                  
 
                     {exp.experienceFile && (
                       <div className="mt-3">
@@ -388,15 +394,24 @@ const ProfileValidatorApp = () => {
                       isValidated={isValidated}
                       badgeLevel={getNestedBadge('education', i, 'institute')}
                     />
-                    <InfoField 
-                      label="Period" 
-                      value={`${new Date(edu.startDate).toLocaleDateString()} - ${new Date(edu.endDate).toLocaleDateString()}`} 
-                      name={`edu-period-${i}`}
-                      feedback={feedback}
-                      onFeedbackChange={handleFeedbackChange}
-                      isValidated={isValidated}
-                      badgeLevel={getNestedBadge('education', i, 'period')}
-                    />
+                 <InfoField 
+  label="Start Date" 
+  value={new Date(edu.startDate).toLocaleDateString()} 
+  name={`edu-startDate-${i}`}
+  feedback={feedback}
+  onFeedbackChange={handleFeedbackChange}
+  isValidated={isValidated}
+  badgeLevel={getNestedBadge('education', i, 'startDate')}
+/>
+<InfoField 
+  label="End Date" 
+  value={new Date(edu.endDate).toLocaleDateString()} 
+  name={`edu-endDate-${i}`}
+  feedback={feedback}
+  onFeedbackChange={handleFeedbackChange}
+  isValidated={isValidated}
+  badgeLevel={getNestedBadge('education', i, 'endDate')}
+/>
                    
 
                     {edu.degreeFile && (
