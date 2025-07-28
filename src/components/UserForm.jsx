@@ -1,12 +1,12 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { fetchProfileById, resetProfileState, submitProfile } from "../Redux/profile";
 import axiosinstance from "../Connection/Api";
 import { useDropzone } from "react-dropzone";
 import { toast } from "react-toastify";
+import SuccessMessage from "./SubmissionSuccess";
 
 const COUNTRIES = ["Pakistan", "India", "China", "USA", "UK", "UAE", "Canada", "Other"];
 const GENDERS = ["Male", "Female", "Other"];
@@ -84,7 +84,6 @@ const JOB_FUNCTIONS = [
 const VISIBILITY_PRESETS = ["Public", "Private", "Hide"];
 const VERIFICATION_LEVELS = ["Silver", "Gold", "Platinum"];
 
-// Templates
 const newEducationTemplate = {
   id: "",
   degreeTitle: "",
@@ -107,7 +106,6 @@ const newExperienceTemplate = {
   industry: "",
 };
 
-// Components
 const FileUpload = ({ label, onDrop, file, className = "", disabled = false }) => {
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -164,23 +162,6 @@ const Section = ({ title, icon, children }) => {
       </div>
       {children}
     </div>
-  );
-};
-
-const VerificationBadge = ({ level }) => {
-  const badgeColors = {
-    Silver: "bg-gray-300 text-gray-800",
-    Gold: "bg-yellow-400 text-yellow-800",
-    Platinum: "bg-blue-100 text-blue-800"
-  };
-
-  return (
-    <span 
-      className={`text-xs px-2 py-0.5 rounded-full ${badgeColors[level] || badgeColors.Silver}`}
-      title={`Verified: ${level}`}
-    >
-      {level}
-    </span>
   );
 };
 
@@ -292,521 +273,534 @@ const CheckboxGroup = ({ legend, options, selectedOptions, onChange, className =
   );
 };
 
-const FileUploadButton = ({ label, onChange, className = "", disabled = false }) => {
-  return (
-    <div className={`space-y-1 ${className}`}>
-      <div className="flex items-center gap-1">
-        <img src="https://i.pinimg.com/564x/29/9d/4e/299d4e690b6a9557188e5c64644f5acd.jpg" alt="tick" className="w-4 h-4" />
-        <label className="block text-xs font-semibold text-slate-700">{label}</label>
-      </div>
-      <div className="relative">
-        <input 
-          type="file" 
-          onChange={!disabled ? onChange : undefined}
-          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" 
-          accept=".pdf,.png,.jpg,.jpeg"
-          disabled={disabled}
-        />
-        <div className={`w-full px-3 py-2 border border-dashed rounded-md transition-colors text-center ${
-          disabled 
-            ? 'bg-gray-100 border-gray-300 cursor-not-allowed' 
-            : 'border-slate-300 bg-slate-50 cursor-pointer hover:border-[#f4793d]'
-        }`}>
-          <div className="flex items-center justify-center gap-1">
-            <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-              />
-            </svg>
-            <span className={`text-xs ${disabled ? 'text-gray-500' : 'text-slate-600'}`}>Upload file</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const VisibilityControl = ({ fieldName, currentVisibility, onChange, disabled = false }) => {
-  return (
-    <div className="flex flex-col gap-1 mt-1 p-2 rounded bg-slate-50">
-      <span className="text-xs font-medium text-slate-600">Visibility:</span>
-      <div className="flex gap-2">
-        {VISIBILITY_PRESETS.map((option) => (
-          <label key={option} className={`flex items-center gap-1 text-xs ${
-            disabled ? 'cursor-not-allowed text-gray-500' : 'cursor-pointer'
-          }`}>
-            <input
-              type="radio"
-              name={`vis-${fieldName}`}
-              value={option}
-              checked={currentVisibility === option}
-              onChange={() => !disabled && onChange(fieldName, option)}
-              disabled={disabled}
-              className={`w-3 h-3 text-[#f4793d] border-gray-300 focus:ring-[#f4793d] ${
-                disabled ? 'cursor-not-allowed' : ''
-              }`}
-            />
-            <span className={`${disabled ? 'text-gray-500' : 'text-slate-700'}`}>{option}</span>
-          </label>
-        ))}
-      </div>
-    </div>
-  );
-};
-
 const FieldWrapper = ({ children, fieldName, formData, handleFieldVisibility, isCnicField = false, disabled = false }) => {
   const visibility = formData.fieldVisibilities[fieldName] || "Private";
 
   return (
     <div>
       {children}
-      {fieldName && !isCnicField && (
-        <VisibilityControl 
-          fieldName={fieldName}
-          currentVisibility={visibility}
-          onChange={handleFieldVisibility}
-          disabled={disabled}
-        />
+      {fieldName && !isCnicField && !disabled && (
+        <div className="flex flex-col gap-1 mt-1 p-2 rounded bg-slate-50">
+          <span className="text-xs font-medium text-slate-600">Visibility:</span>
+          <div className="flex gap-2">
+            {VISIBILITY_PRESETS.map((option) => (
+              <label key={option} className={`flex items-center gap-1 text-xs cursor-pointer`}>
+                <input
+                  type="radio"
+                  name={`vis-${fieldName}`}
+                  value={option}
+                  checked={visibility === option}
+                  onChange={() => handleFieldVisibility(fieldName, option)}
+                  className={`w-3 h-3 text-[#f4793d] border-gray-300 focus:ring-[#f4793d]`}
+                />
+                <span className="text-slate-700">{option}</span>
+              </label>
+            ))}
+          </div>
+        </div>
       )}
     </div>
   );
 };
 
 const UserForm = () => {
-   const location = useLocation();
-  const dispatch = useDispatch();
+  const location = useLocation();
   const navigate = useNavigate();
+  const [editMode, setEditMode] = useState(false);
+  const [profileId, setProfileId] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [submitted, setSubmitted] = useState(false);
+  
+  const userEmail = localStorage.getItem('userEmail') || '';
+  const firstName = localStorage.getItem('firstName') || '';
+  const lastName = localStorage.getItem('lastName') || '';
 
+  const [formData, setFormData] = useState({
+    personal: {
+      name: `${firstName} ${lastName}`.trim(),
+      mobile: "",
+      email: userEmail || "",
+      cnic: "",
+      fatherName: "",
+      city: "",
+      country: "",
+      gender: "",
+      dob: null,
+      nationality: "",
+      residentStatus: "",
+      maritalStatus: "",
+      shiftPreferences: [],
+      workLocationPreference: "",
+      workAuthorization: [],
+    },
+    fieldVisibilities: {},
+    education: [{ ...newEducationTemplate, id: Date.now().toString() }],
+    experience: [{ ...newExperienceTemplate, id: Date.now().toString() }],
+  });
 
- 
-
-const userEmail = localStorage.getItem('userEmail') || '';
-const firstName = localStorage.getItem('firstName') || '';
-const lastName = localStorage.getItem('lastName') || '';
-
-  const { loading, error, success, profile } = useSelector(state => state.profile);
-
-const [formData, setFormData] = useState({
-  personal: {
-    name: `${firstName} ${lastName}`.trim(),
-    mobile: "",
-    email: userEmail || "",
-    cnic: "",
-    fatherName: "",
-    city: "",
-    country: "",
-    gender: "",
-    maritalStatus: "",
-    residentStatus: "",
-    shiftPreferences: [],
-    workLocationPreference: "",
-    dob: null,
-    nationality: "",
-    workAuthorization: [],
-  },
-  fieldVisibilities: {},
-  education: [{ 
-    ...newEducationTemplate, 
-    id: Date.now().toString(),
-    degreeTitle: "",
-    institute: "",
-    startDate: null,
-    endDate: null
-  }],
-  experience: [{ 
-    ...newExperienceTemplate, 
-    id: Date.now().toString(),
-    jobTitle: "",
-    company: "",
-    startDate: null,
-    endDate: null,
-    industry: ""
-  }],
-});
-
-const [files, setFiles] = useState({ 
-  resume: null, 
-  profilePicture: null 
-});
+  const [files, setFiles] = useState({ 
+    resume: null, 
+    profilePicture: null 
+  });
   const [selectedPreset, setSelectedPreset] = useState("");
 
-  useEffect(() => {
-    if (profile) {
-      const transformedProfile = {
-        personal: {
-          name: profile.name || "",
-          mobile: profile.mobile || "",
-             email: profile.email || userEmail,
-          cnic: profile.cnic || "",
-          fatherName: profile.fatherName || "",
-          city: profile.city || "",
-          country: profile.country || "Pakistan",
-          gender: profile.gender || "",
-          maritalStatus: profile.maritalStatus || "",
-          residentStatus: profile.residentStatus || "",
-          shiftPreferences: profile.shiftPreferences || [],
-          workLocationPreference: profile.workLocationPreference || "",
-          dob: profile.dob ? new Date(profile.dob) : null,
-          nationality: profile.nationality || "Pakistan",
-          workAuthorization: profile.workAuthorization || [],
-        },
-        fieldVisibilities: profile.fieldVisibilities || {},
-        education: profile.education?.length > 0 
-          ? profile.education.map(edu => ({
-              ...edu,
-              id: edu.id || Date.now().toString(),
-              startDate: edu.startDate ? new Date(edu.startDate) : null,
-              endDate: edu.endDate ? new Date(edu.endDate) : null,
-              degreeFile: null
-            }))
-          : [{ ...newEducationTemplate, id: Date.now().toString() }],
-        experience: profile.experience?.length > 0 
-          ? profile.experience.map(exp => ({
-              ...exp,
-              id: exp.id || Date.now().toString(),
-              startDate: exp.startDate ? new Date(exp.startDate) : null,
-              endDate: exp.endDate ? new Date(exp.endDate) : null,
-              experienceFile: null,
-              jobFunctions: exp.jobFunctions || []
-            }))
-          : [{ ...newExperienceTemplate, id: Date.now().toString() }],
-      };
-
-      setFormData(transformedProfile);
+useEffect(() => {
+  const checkExistingProfile = async () => {
+    try {
+      const userId = localStorage.getItem("userId");
+      const response = await axiosinstance.get(`/profile/user/${userId}`);
       
-      if (profile.resumeUrl) {
-        setFiles(prev => ({
-          ...prev,
-          resume: { name: "resume.pdf" }
-        }));
+      if (response.data.success) {
+        const profile = response.data.data;
+        setProfileId(profile._id);
+        setEditMode(false);
+        
+        // Transform profile data to match form structure
+        const transformedData = {
+          personal: {
+            name: profile.name || `${firstName} ${lastName}`.trim(),
+            mobile: profile.mobile || "",
+            email: profile.email || userEmail,
+            cnic: profile.cnic || "",
+            fatherName: profile.fatherName || "",
+            city: profile.city || "",
+            country: profile.country || "",
+            gender: profile.gender || "",
+            dob: profile.dob ? new Date(profile.dob) : null,
+            nationality: profile.nationality || "",
+            residentStatus: profile.residentStatus || "",
+            maritalStatus: profile.maritalStatus || "",
+            shiftPreferences: profile.shiftPreferences || [],
+            workLocationPreference: profile.workLocationPreference || "",
+            workAuthorization: profile.workAuthorization || [],
+          },
+          fieldVisibilities: profile.fieldVisibilities || {},
+          // Handle education array - ensure all entries are included
+          education: profile.education?.length > 0 
+            ? profile.education.map(edu => ({
+                id: edu._id || Date.now().toString(),
+                degreeTitle: edu.degreeTitle || "",
+                institute: edu.institute || "",
+                startDate: edu.startDate ? new Date(edu.startDate) : null,
+                endDate: edu.endDate ? new Date(edu.endDate) : null,
+                website: edu.website || "",
+                degreeFile: null, // Will be handled separately
+                degreeTitleVisibility: edu.degreeTitleVisibility || "Public",
+                instituteVisibility: edu.instituteVisibility || "Public",
+                startDateVisibility: edu.startDateVisibility || "Public",
+                endDateVisibility: edu.endDateVisibility || "Public",
+                websiteVisibility: edu.websiteVisibility || "Public",
+                degreeFileVisibility: edu.degreeFileVisibility || "Public",
+                verificationLevel: edu.verificationLevel || "Silver",
+                // Include all badge fields
+                degreeTitleBadge: edu.degreeTitleBadge || "Black",
+                degreeTitleBadgeScore: edu.degreeTitleBadgeScore || 0,
+                instituteBadge: edu.instituteBadge || "Black",
+                instituteBadgeScore: edu.instituteBadgeScore || 0,
+                startDateBadge: edu.startDateBadge || "Black",
+                startDateBadgeScore: edu.startDateBadgeScore || 0,
+                endDateBadge: edu.endDateBadge || "Black",
+                endDateBadgeScore: edu.endDateBadgeScore || 0,
+                degreeFileBadge: edu.degreeFileBadge || "Black",
+                degreeFileBadgeScore: edu.degreeFileBadgeScore || 0,
+                websiteBadge: edu.websiteBadge || "Black",
+                websiteBadgeScore: edu.websiteBadgeScore || 0
+              }))
+            : [{ ...newEducationTemplate, id: Date.now().toString() }],
+          // Handle experience array - ensure all entries are included
+          experience: profile.experience?.length > 0 
+            ? profile.experience.map(exp => ({
+                id: exp._id || Date.now().toString(),
+                jobTitle: exp.jobTitle || "",
+                company: exp.company || "",
+                startDate: exp.startDate ? new Date(exp.startDate) : null,
+                endDate: exp.endDate ? new Date(exp.endDate) : null,
+                website: exp.website || "",
+                experienceFile: null, // Will be handled separately
+                jobFunctions: exp.jobFunctions || [],
+                industry: exp.industry || "",
+                jobTitleVisibility: exp.jobTitleVisibility || "Public",
+                companyVisibility: exp.companyVisibility || "Public",
+                startDateVisibility: exp.startDateVisibility || "Public",
+                endDateVisibility: exp.endDateVisibility || "Public",
+                websiteVisibility: exp.websiteVisibility || "Public",
+                experienceFileVisibility: exp.experienceFileVisibility || "Public",
+                jobFunctionsVisibility: exp.jobFunctionsVisibility || "Public",
+                industryVisibility: exp.industryVisibility || "Public",
+                verificationLevel: exp.verificationLevel || "Silver",
+                // Include all badge fields
+                jobTitleBadge: exp.jobTitleBadge || "Black",
+                jobTitleBadgeScore: exp.jobTitleBadgeScore || 0,
+                companyBadge: exp.companyBadge || "Black",
+                companyBadgeScore: exp.companyBadgeScore || 0,
+                startDateBadge: exp.startDateBadge || "Black",
+                startDateBadgeScore: exp.startDateBadgeScore || 0,
+                endDateBadge: exp.endDateBadge || "Black",
+                endDateBadgeScore: exp.endDateBadgeScore || 0,
+                jobFunctionsBadge: exp.jobFunctionsBadge || "Black",
+                jobFunctionsBadgeScore: exp.jobFunctionsBadgeScore || 0,
+                industryBadge: exp.industryBadge || "Black",
+                industryBadgeScore: exp.industryBadgeScore || 0,
+                websiteBadge: exp.websiteBadge || "Black",
+                websiteBadgeScore: exp.websiteBadgeScore || 0,
+                experienceFileBadge: exp.experienceFileBadge || "Black",
+                experienceFileBadgeScore: exp.experienceFileBadgeScore || 0
+              }))
+            : [{ ...newExperienceTemplate, id: Date.now().toString() }],
+        };
+
+        setFormData(transformedData);
+        
+        // Handle files
+        if (profile.resume) {
+          setFiles(prev => ({ ...prev, resume: { name: "resume.pdf", url: profile.resume } }));
+        }
+        if (profile.profilePicture) {
+          setFiles(prev => ({ ...prev, profilePicture: { name: "profile.jpg", url: profile.profilePicture } }));
+        }
       }
-      if (profile.profilePictureUrl) {
-        setFiles(prev => ({
-          ...prev,
-          profilePicture: { name: "profile.jpg" }
-        }));
+    } catch (error) {
+      console.log('No existing profile found - starting fresh');
+      setEditMode(true);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  checkExistingProfile();
+}, []);
+
+  const handleFileDrop = (field) => (acceptedFiles) => {
+    if (acceptedFiles && acceptedFiles.length > 0 && editMode) {
+      const file = acceptedFiles[0];
+      
+      if (field === 'profilePicture' && !file.type.startsWith('image/')) {
+        toast.error('Please upload an image file for profile picture');
+        return;
       }
+      
+      if (field === 'resume' && file.type !== 'application/pdf') {
+        toast.error('Please upload a PDF file for resume');
+        return;
+      }
+
+      setFiles(prev => ({
+        ...prev,
+        [field]: file
+      }));
     }
-}, [profile, userEmail]);
-
-  useEffect(() => {
-    if (success) {
-      toast.success("Profile submitted successfully!");
-      dispatch(resetProfileState());
-    }
-  }, [success, dispatch]);
-
-  useEffect(() => {
-    if (error) {
-      const errorMessage = error.message || 
-                          error.error || 
-                          JSON.stringify(error);
-      toast.error(`Error: ${errorMessage}`);
-    }
-  }, [error]);
-
-const handleFileDrop = (field) => (acceptedFiles) => {
-  if (acceptedFiles && acceptedFiles.length > 0) {
-    const file = acceptedFiles[0];
-    
-    // Validate file types
-    if (field === 'profilePicture' && !file.type.startsWith('image/')) {
-      toast.error('Please upload an image file for profile picture');
-      return;
-    }
-    
-    if (field === 'resume' && file.type !== 'application/pdf') {
-      toast.error('Please upload a PDF file for resume');
-      return;
-    }
-
-    setFiles(prev => ({
-      ...prev,
-      [field]: file // This should be the actual File object
-    }));
-  }
-};
-
-
-
-
+  };
 
   const handleRemoveFile = (field) => {
-    setFiles(prev => ({
-      ...prev,
-      [field]: null
-    }));
-  };
-
-  const applyVisibilityPreset = (preset) => {
-    const newFieldVisibilities = {};
-    // Add all personal fields except cnic
-    Object.keys(formData.personal).forEach(field => {
-      if (field !== 'cnic' && !field.includes('cnic')) {
-        newFieldVisibilities[field] = preset;
-      }
-    });
-    // Add resume and profilePicture
-    newFieldVisibilities['resume'] = preset;
-    newFieldVisibilities['profilePicture'] = preset;
-    // Add shiftPreferences and workAuthorization
-    newFieldVisibilities['shiftPreferences'] = preset;
-    newFieldVisibilities['workAuthorization'] = preset;
-    // Add dob
-    newFieldVisibilities['dob'] = preset;
-    // Add education fields
-    formData.education.forEach((edu, index) => {
-      [
-        'degreeTitle',
-        'startDate',
-        'endDate',
-        'institute',
-        'website',
-        'degreeFile'
-      ].forEach(field => {
-        newFieldVisibilities[`education-${index}-${field}`] = preset;
-      });
-    });
-    // Add experience fields
-    formData.experience.forEach((exp, index) => {
-      [
-        'jobTitle',
-        'startDate',
-        'endDate',
-        'company',
-        'website',
-        'experienceFile',
-        'jobFunctions',
-        'industry'
-      ].forEach(field => {
-        newFieldVisibilities[`experience-${index}-${field}`] = preset;
-      });
-    });
-    setFormData(prev => ({
-      ...prev,
-      fieldVisibilities: newFieldVisibilities
-    }));
-  };
-
-  const handleApplyPreset = () => {
-    if (selectedPreset) {
-      applyVisibilityPreset(selectedPreset);
+    if (editMode) {
+      setFiles(prev => ({
+        ...prev,
+        [field]: null
+      }));
     }
   };
 
   const handlePersonalChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, personal: { ...prev.personal, [name]: value } }));
+    if (editMode) {
+      const { name, value } = e.target;
+      setFormData(prev => ({ ...prev, personal: { ...prev.personal, [name]: value } }));
+    }
   };
 
   const handleDobChange = (date) => {
-    setFormData(prev => ({ 
-      ...prev, 
-      personal: { 
-        ...prev.personal, 
-        dob: date
-      } 
-    }));
+    if (editMode) {
+      setFormData(prev => ({ 
+        ...prev, 
+        personal: { 
+          ...prev.personal, 
+          dob: date
+        } 
+      }));
+    }
   };
 
- const handleCheckboxChange = (group, option) => {
-  setFormData(prev => {
-    const currentSelection = prev.personal[group] || [];
-    const newSelection = currentSelection.includes(option)
-      ? currentSelection.filter(item => item !== option)
-      : [...currentSelection, option];
-    
-    return { 
-      ...prev, 
-      personal: { 
-        ...prev.personal, 
-        [group]: newSelection 
-      } 
-    };
-  });
-};
-
+  const handleCheckboxChange = (group, option) => {
+    if (editMode) {
+      setFormData(prev => {
+        const currentSelection = prev.personal[group] || [];
+        const newSelection = currentSelection.includes(option)
+          ? currentSelection.filter(item => item !== option)
+          : [...currentSelection, option];
+        
+        return { 
+          ...prev, 
+          personal: { 
+            ...prev.personal, 
+            [group]: newSelection 
+          } 
+        };
+      });
+    }
+  };
 
   const handleDynamicChange = (section, index, e) => {
-    const { name, value } = e.target;
-    const updated = [...formData[section]];
-    updated[index][name] = value;
-    setFormData(prev => ({ ...prev, [section]: updated }));
+    if (editMode) {
+      const { name, value } = e.target;
+      const updated = [...formData[section]];
+      updated[index][name] = value;
+      setFormData(prev => ({ ...prev, [section]: updated }));
+    }
   };
 
-const handleDynamicDateChange = (section, index, field, date) => {
-  const updated = [...formData[section]];
-  updated[index][field] = date;
-  setFormData(prev => ({ ...prev, [section]: updated }));
-};
+  const handleDynamicDateChange = (section, index, field, date) => {
+    if (editMode) {
+      const updated = [...formData[section]];
+      updated[index][field] = date;
+      setFormData(prev => ({ ...prev, [section]: updated }));
+    }
+  };
 
   const handleDynamicFileChange = (section, index, e) => {
-    const updated = [...formData[section]];
-    // Remove file if e.target.files is empty or not present
-    if (!e.target.files || e.target.files.length === 0) {
-      updated[index][section === "education" ? "degreeFile" : "experienceFile"] = null;
-    } else {
-      const file = e.target.files[0];
-      updated[index][section === "education" ? "degreeFile" : "experienceFile"] = file;
+    if (editMode) {
+      const updated = [...formData[section]];
+      if (!e.target.files || e.target.files.length === 0) {
+        updated[index][section === "education" ? "degreeFile" : "experienceFile"] = null;
+      } else {
+        const file = e.target.files[0];
+        updated[index][section === "education" ? "degreeFile" : "experienceFile"] = file;
+      }
+      setFormData(prev => ({ ...prev, [section]: updated }));
     }
-    setFormData(prev => ({ ...prev, [section]: updated }));
   };
 
- const handleDynamicCheckboxChange = (section, index, field, option) => {
-  const updated = [...formData[section]];
-  const options = updated[index][field] || [];
-  updated[index][field] = options.includes(option) 
-    ? options.filter(o => o !== option) 
-    : [...options, option];
-  setFormData(prev => ({ ...prev, [section]: updated }));
-};
+  const handleDynamicCheckboxChange = (section, index, field, option) => {
+    if (editMode) {
+      const updated = [...formData[section]];
+      const options = updated[index][field] || [];
+      updated[index][field] = options.includes(option) 
+        ? options.filter(o => o !== option) 
+        : [...options, option];
+      setFormData(prev => ({ ...prev, [section]: updated }));
+    }
+  };
 
   const addNewEntry = (section) => {
-    const newItem = section === "education"
-      ? { ...newEducationTemplate, id: Date.now().toString() }
-      : { ...newExperienceTemplate, id: Date.now().toString() };
-    setFormData(prev => ({ ...prev, [section]: [...prev[section], newItem] }));
+    if (editMode) {
+      const newItem = section === "education"
+        ? { ...newEducationTemplate, id: Date.now().toString() }
+        : { ...newExperienceTemplate, id: Date.now().toString() };
+      setFormData(prev => ({ ...prev, [section]: [...prev[section], newItem] }));
+    }
   };
 
   const removeDynamicItem = (section, id) => {
-    setFormData(prev => ({ 
-      ...prev, 
-      [section]: prev[section].filter(item => item.id !== id) 
-    }));
+    if (editMode) {
+      setFormData(prev => ({ 
+        ...prev, 
+        [section]: prev[section].filter(item => item.id !== id) 
+      }));
+    }
   };
 
   const handleFieldVisibility = (field, value) => {
-    setFormData(prev => ({
-      ...prev,
-      fieldVisibilities: {
-        ...prev.fieldVisibilities,
-        [field]: value
-      }
-    }));
+    if (editMode) {
+      setFormData(prev => ({
+        ...prev,
+        fieldVisibilities: {
+          ...prev.fieldVisibilities,
+          [field]: value
+        }
+      }));
+    }
   };
 
-// Update the handleSubmit function in UserForm.js
-// Update the handleSubmit function in UserForm.js
-const handleSubmit = async (e) => {
-  e.preventDefault();
-
-  try {
-    // Validate required files
-    if (!files.profilePicture || !files.resume) {
-      toast.error('Please upload both profile picture and resume');
-      return;
+  const handleApplyPreset = () => {
+    if (editMode && selectedPreset) {
+      const newFieldVisibilities = {};
+      
+      // Personal fields
+      Object.keys(formData.personal).forEach(field => {
+        if (field !== 'cnic') {
+          newFieldVisibilities[field] = selectedPreset;
+        }
+      });
+      
+      // Files
+      newFieldVisibilities['resume'] = selectedPreset;
+      newFieldVisibilities['profilePicture'] = selectedPreset;
+      
+      // Education fields
+      formData.education.forEach((edu, index) => {
+        [
+          'degreeTitle',
+          'institute',
+          'startDate',
+          'endDate',
+          'website',
+          'degreeFile'
+        ].forEach(field => {
+          newFieldVisibilities[`education-${index}-${field}`] = selectedPreset;
+        });
+      });
+      
+      // Experience fields
+      formData.experience.forEach((exp, index) => {
+        [
+          'jobTitle',
+          'company',
+          'startDate',
+          'endDate',
+          'website',
+          'experienceFile',
+          'jobFunctions',
+          'industry'
+        ].forEach(field => {
+          newFieldVisibilities[`experience-${index}-${field}`] = selectedPreset;
+        });
+      });
+      
+      setFormData(prev => ({
+        ...prev,
+        fieldVisibilities: newFieldVisibilities
+      }));
     }
+  };
 
-    // Validate education files
-    for (const edu of formData.education) {
-      if (!edu.degreeFile) {
-        toast.error(`Please upload degree file for education: ${edu.degreeTitle}`);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    try {
+      // Validate required files
+      if (!files.profilePicture || !files.resume) {
+        toast.error('Please upload both profile picture and resume');
         return;
       }
-    }
 
-    // Validate experience files
-    for (const exp of formData.experience) {
-      if (!exp.experienceFile) {
-        toast.error(`Please upload experience file for: ${exp.jobTitle} at ${exp.company}`);
-        return;
-      }
-    }
-
-    const formDataToSend = new FormData();
-    const userId = localStorage.getItem("userId");
-    formDataToSend.append("userId", userId);
-
-    // Add personal info including arrays
-    Object.entries(formData.personal).forEach(([field, value]) => {
-      if (value !== null && value !== undefined) {
-        if (field === 'dob' && value) {
-          formDataToSend.append(field, value.toISOString());
-        } else if (Array.isArray(value)) {
-          // Handle arrays properly - shiftPreferences and workAuthorization
-          value.forEach((item, index) => {
-            formDataToSend.append(`${field}[${index}]`, item);
-          });
-        } else {
-          formDataToSend.append(field, value);
+      // Validate education files
+      for (const edu of formData.education) {
+        if (!edu.degreeFile && !profileId) {
+          toast.error(`Please upload degree file for education: ${edu.degreeTitle}`);
+          return;
         }
       }
-    });
 
-    // Add files
-    formDataToSend.append('profilePicture', files.profilePicture);
-    formDataToSend.append('resume', files.resume);
-
-    // Add education entries
-    formData.education.forEach((edu, index) => {
-      formDataToSend.append(`education[${index}][degreeTitle]`, edu.degreeTitle);
-      formDataToSend.append(`education[${index}][institute]`, edu.institute);
-      formDataToSend.append(`education[${index}][startDate]`, edu.startDate?.toISOString());
-      formDataToSend.append(`education[${index}][endDate]`, edu.endDate?.toISOString());
-      formDataToSend.append(`education[${index}][website]`, edu.website || '');
-      formDataToSend.append(`education[${index}][degreeFile]`, edu.degreeFile);
-    });
-
-    // Add experience entries
-    formData.experience.forEach((exp, index) => {
-      formDataToSend.append(`experience[${index}][jobTitle]`, exp.jobTitle);
-      formDataToSend.append(`experience[${index}][company]`, exp.company);
-      formDataToSend.append(`experience[${index}][startDate]`, exp.startDate?.toISOString());
-      formDataToSend.append(`experience[${index}][endDate]`, exp.endDate?.toISOString());
-      formDataToSend.append(`experience[${index}][website]`, exp.website || '');
-      formDataToSend.append(`experience[${index}][industry]`, exp.industry);
-      
-      // Properly handle jobFunctions array
-      if (exp.jobFunctions && exp.jobFunctions.length > 0) {
-        exp.jobFunctions.forEach((func, funcIndex) => {
-          formDataToSend.append(`experience[${index}][jobFunctions][${funcIndex}]`, func);
-        });
+      // Validate experience files
+      for (const exp of formData.experience) {
+        if (!exp.experienceFile && !profileId) {
+          toast.error(`Please upload experience file for: ${exp.jobTitle} at ${exp.company}`);
+          return;
+        }
       }
 
-      formDataToSend.append(`experience[${index}][experienceFile]`, exp.experienceFile);
-    });
+      const formDataToSend = new FormData();
+      const userId = localStorage.getItem("userId");
+      formDataToSend.append("userId", userId);
 
-    // Debug: Log the form data before submission
-    console.log('🔍 Form Submission Debug Info');
-    console.log('User ID:', userId);
-    console.log('Personal Info:', formData.personal);
-    console.log('Shift Preferences:', formData.personal.shiftPreferences);
-    console.log('Work Authorization:', formData.personal.workAuthorization);
-    console.log('Education:', formData.education);
-    console.log('Experience:', formData.experience);
-    console.log('Files:', files);
+      if (profileId) {
+        formDataToSend.append("profileId", profileId);
+      }
 
-    // Log FormData entries
-    console.log('FormData entries:');
-    for (let pair of formDataToSend.entries()) {
-      console.log(`${pair[0]}:`, pair[1]);
+      // Add personal info including arrays
+      Object.entries(formData.personal).forEach(([field, value]) => {
+        if (value !== null && value !== undefined) {
+          if (field === 'dob' && value) {
+            formDataToSend.append(field, value.toISOString());
+          } else if (Array.isArray(value)) {
+            value.forEach((item, index) => {
+              formDataToSend.append(`${field}[${index}]`, item);
+            });
+          } else {
+            formDataToSend.append(field, value);
+          }
+        }
+      });
+
+      // Add files
+      if (files.profilePicture instanceof File) {
+        formDataToSend.append('profilePicture', files.profilePicture);
+      }
+      if (files.resume instanceof File) {
+        formDataToSend.append('resume', files.resume);
+      }
+
+      // Add education entries
+      formData.education.forEach((edu, index) => {
+        formDataToSend.append(`education[${index}][degreeTitle]`, edu.degreeTitle);
+        formDataToSend.append(`education[${index}][institute]`, edu.institute);
+        formDataToSend.append(`education[${index}][startDate]`, edu.startDate?.toISOString());
+        formDataToSend.append(`education[${index}][endDate]`, edu.endDate?.toISOString());
+        formDataToSend.append(`education[${index}][website]`, edu.website || '');
+        if (edu.degreeFile instanceof File) {
+          formDataToSend.append(`education[${index}][degreeFile]`, edu.degreeFile);
+        }
+      });
+
+      // Add experience entries
+      formData.experience.forEach((exp, index) => {
+        formDataToSend.append(`experience[${index}][jobTitle]`, exp.jobTitle);
+        formDataToSend.append(`experience[${index}][company]`, exp.company);
+        formDataToSend.append(`experience[${index}][startDate]`, exp.startDate?.toISOString());
+        formDataToSend.append(`experience[${index}][endDate]`, exp.endDate?.toISOString());
+        formDataToSend.append(`experience[${index}][website]`, exp.website || '');
+        formDataToSend.append(`experience[${index}][industry]`, exp.industry);
+        
+        // Job functions
+        if (exp.jobFunctions && exp.jobFunctions.length > 0) {
+          exp.jobFunctions.forEach((func, funcIndex) => {
+            formDataToSend.append(`experience[${index}][jobFunctions][${funcIndex}]`, func);
+          });
+        }
+
+        if (exp.experienceFile instanceof File) {
+          formDataToSend.append(`experience[${index}][experienceFile]`, exp.experienceFile);
+        }
+      });
+
+      // Submit the form
+      const endpoint = profileId ? `/profile/${profileId}` : '/profile';
+      const method = profileId ? 'put' : 'post';
+
+      const response = await axiosinstance[method](endpoint, formDataToSend, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      if (response.data.success) {
+        toast.success(profileId ? 'Profile updated successfully!' : 'Profile submitted successfully!');
+        
+        if (profileId) {
+          // If updating, stay in the form but disable edit mode
+          setEditMode(false);
+        } else {
+          // If new submission, set the profile ID and show success
+          setProfileId(response.data.data._id);
+          setSubmitted(true);
+        }
+      } else {
+        toast.error(response.data.message || 'Failed to submit profile');
+      }
+    } catch (error) {
+      console.error('Submission error:', error);
+      const errorMsg = error.response?.data?.message || 
+                      error.response?.data?.error || 
+                      error.message || 
+                      'Failed to submit profile';
+      toast.error(errorMsg);
     }
+  };
 
-    // Submit the form
-    const response = await axiosinstance.post('/profile', formDataToSend, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+  const handleEditToggle = () => {
+    setEditMode(!editMode);
+  };
 
-    if (response.data.success) {
-      toast.success('Profile submitted successfully!');
-      navigate('/success');
-    } else {
-      toast.error(response.data.message || 'Failed to submit profile');
-    }
-  } catch (error) {
-    console.error('Submission error:', error);
-    const errorMsg = error.response?.data?.message || 
-                    error.response?.data?.error || 
-                    error.message || 
-                    'Failed to submit profile';
-    toast.error(errorMsg);
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#f4793d]"></div>
+      </div>
+    );
   }
-};
+
+  if (submitted) {
+    return <SuccessMessage />;
+  }
+
   return (
     <div className="min-h-screen bg-white">
       <div className="bg-white text-gray-900 py-4 shadow-sm border-b border-gray-100">
@@ -823,39 +817,30 @@ const handleSubmit = async (e) => {
                   Professional Profile
                 </h1>
                 <p className="text-gray-500 text-xs mt-1">
-                  Complete your profile
+                  {profileId ? 'View and edit your profile' : 'Complete your profile'}
                 </p>
               </div>
             </div>
-            <div className="flex items-center mt-7 md:mt-0 gap-2">
-              <div className="space-y-1 w-48">
-                <label className="block text-xs font-semibold text-slate-700">Visibility Preset</label>
-                <select
-                  name="visibilityPreset"
-                  value={selectedPreset}
-                  onChange={e => setSelectedPreset(e.target.value)}
-                  className="w-full px-3 py-1.5 text-sm border border-slate-300 rounded-md focus:ring-1 focus:ring-[#f4793d] focus:border-[#f4793d] transition-colors bg-white text-slate-900"
-                >
-                  <option value="">Set all visibility</option>
-                  {VISIBILITY_PRESETS.map(option => (
-                    <option key={option} value={option}>{option}</option>
-                  ))}
-                </select>
-              </div>
+            
+            {profileId && (
               <button
-                onClick={handleApplyPreset}
-                disabled={!selectedPreset}
-                className="px-3 py-1.5 bg-[#f4793d] text-white rounded hover:bg-[#e66e33] mt-5 text-sm font-medium"
+                onClick={handleEditToggle}
+                className={`px-4 py-1.5 rounded text-sm font-medium mt-4 md:mt-0 ${
+                  editMode 
+                    ? 'bg-gray-200 text-gray-800 hover:bg-gray-300' 
+                    : 'bg-[#f4793d] text-white hover:bg-[#e66e33]'
+                }`}
               >
-                Apply
+                {editMode ? 'Cancel Editing' : 'Edit Profile'}
               </button>
-            </div>
+            )}
           </div>
         </div>
       </div>
 
       <div className="max-w-6xl mx-auto px-3 py-4">
         <form className="space-y-6" onSubmit={handleSubmit}>
+          {/* Personal Information Section */}
           <Section
             icon={
               <div className="bg-gradient-to-r from-gray-100 to-indigo-100 p-1.5 rounded-lg">
@@ -872,6 +857,7 @@ const handleSubmit = async (e) => {
                   fieldName="name" 
                   formData={formData} 
                   handleFieldVisibility={handleFieldVisibility}
+                  disabled={!editMode}
                 >
                   <Input
                     label="Name"
@@ -879,7 +865,7 @@ const handleSubmit = async (e) => {
                     value={formData.personal.name}
                     onChange={handlePersonalChange}
                     required
-                 
+                    disabled={!editMode}
                   />
                 </FieldWrapper>
 
@@ -887,6 +873,7 @@ const handleSubmit = async (e) => {
                   fieldName="mobile" 
                   formData={formData} 
                   handleFieldVisibility={handleFieldVisibility}
+                  disabled={!editMode}
                 >
                   <Input
                     label="Mobile"
@@ -894,6 +881,7 @@ const handleSubmit = async (e) => {
                     value={formData.personal.mobile}
                     onChange={handlePersonalChange}
                     required
+                    disabled={!editMode}
                   />
                 </FieldWrapper>
 
@@ -901,6 +889,7 @@ const handleSubmit = async (e) => {
                   fieldName="email" 
                   formData={formData} 
                   handleFieldVisibility={handleFieldVisibility}
+                  disabled={!editMode}
                 >
                   <Input
                     label="Email"
@@ -909,7 +898,7 @@ const handleSubmit = async (e) => {
                     onChange={handlePersonalChange}
                     type="email"
                     required
-                
+                    disabled={!editMode}
                   />
                 </FieldWrapper>
 
@@ -918,6 +907,7 @@ const handleSubmit = async (e) => {
                   formData={formData} 
                   handleFieldVisibility={handleFieldVisibility} 
                   isCnicField
+                  disabled={!editMode}
                 >
                   <Input
                     label="CNIC"
@@ -925,6 +915,7 @@ const handleSubmit = async (e) => {
                     value={formData.personal.cnic}
                     onChange={handlePersonalChange}
                     required
+                    disabled={!editMode}
                   />
                 </FieldWrapper>
 
@@ -932,6 +923,7 @@ const handleSubmit = async (e) => {
                   fieldName="fatherName" 
                   formData={formData} 
                   handleFieldVisibility={handleFieldVisibility}
+                  disabled={!editMode}
                 >
                   <Input
                     label="Father Name"
@@ -939,6 +931,7 @@ const handleSubmit = async (e) => {
                     value={formData.personal.fatherName}
                     onChange={handlePersonalChange}
                     required
+                    disabled={!editMode}
                   />
                 </FieldWrapper>
 
@@ -946,6 +939,7 @@ const handleSubmit = async (e) => {
                   fieldName="city" 
                   formData={formData} 
                   handleFieldVisibility={handleFieldVisibility}
+                  disabled={!editMode}
                 >
                   <Input
                     label="City"
@@ -953,29 +947,33 @@ const handleSubmit = async (e) => {
                     value={formData.personal.city}
                     onChange={handlePersonalChange}
                     required
+                    disabled={!editMode}
                   />
                 </FieldWrapper>
 
-              <FieldWrapper 
-  fieldName="country" 
-  formData={formData} 
-  handleFieldVisibility={handleFieldVisibility}
->
-  <Select
-    name="country"
-    label="Country"
-    value={formData.personal.country}
-    onChange={handlePersonalChange}
-    options={COUNTRIES}
-    defaultOption="Select Country"
-    required
-  />
-</FieldWrapper>
+                <FieldWrapper 
+                  fieldName="country" 
+                  formData={formData} 
+                  handleFieldVisibility={handleFieldVisibility}
+                  disabled={!editMode}
+                >
+                  <Select
+                    name="country"
+                    label="Country"
+                    value={formData.personal.country}
+                    onChange={handlePersonalChange}
+                    options={COUNTRIES}
+                    defaultOption="Select Country"
+                    required
+                    disabled={!editMode}
+                  />
+                </FieldWrapper>
 
                 <FieldWrapper 
                   fieldName="gender" 
                   formData={formData} 
                   handleFieldVisibility={handleFieldVisibility}
+                  disabled={!editMode}
                 >
                   <Select
                     name="gender"
@@ -984,6 +982,7 @@ const handleSubmit = async (e) => {
                     onChange={handlePersonalChange}
                     options={GENDERS}
                     defaultOption="Select Gender"
+                    disabled={!editMode}
                   />
                 </FieldWrapper>
 
@@ -991,6 +990,7 @@ const handleSubmit = async (e) => {
                   fieldName="maritalStatus" 
                   formData={formData} 
                   handleFieldVisibility={handleFieldVisibility}
+                  disabled={!editMode}
                 >
                   <Select
                     name="maritalStatus"
@@ -999,6 +999,7 @@ const handleSubmit = async (e) => {
                     onChange={handlePersonalChange}
                     options={MARITAL_STATUSES}
                     defaultOption="Select Marital Status"
+                    disabled={!editMode}
                   />
                 </FieldWrapper>
 
@@ -1006,6 +1007,7 @@ const handleSubmit = async (e) => {
                   fieldName="residentStatus" 
                   formData={formData} 
                   handleFieldVisibility={handleFieldVisibility}
+                  disabled={!editMode}
                 >
                   <Select
                     name="residentStatus"
@@ -1014,6 +1016,7 @@ const handleSubmit = async (e) => {
                     onChange={handlePersonalChange}
                     options={RESIDENT_STATUSES}
                     defaultOption="Select Resident Status"
+                    disabled={!editMode}
                   />
                 </FieldWrapper>
 
@@ -1021,12 +1024,14 @@ const handleSubmit = async (e) => {
                   fieldName="nationality" 
                   formData={formData} 
                   handleFieldVisibility={handleFieldVisibility}
+                  disabled={!editMode}
                 >
                   <Input
                     label="Nationality"
                     name="nationality"
                     value={formData.personal.nationality}
                     onChange={handlePersonalChange}
+                    disabled={!editMode}
                   />
                 </FieldWrapper>
 
@@ -1034,11 +1039,13 @@ const handleSubmit = async (e) => {
                   fieldName="dob" 
                   formData={formData} 
                   handleFieldVisibility={handleFieldVisibility}
+                  disabled={!editMode}
                 >
                   <DateInput
                     label="Date of Birth"
                     value={formData.personal.dob}
                     onChange={handleDobChange}
+                    disabled={!editMode}
                   />
                 </FieldWrapper>
 
@@ -1046,14 +1053,16 @@ const handleSubmit = async (e) => {
                   fieldName="resume" 
                   formData={formData} 
                   handleFieldVisibility={handleFieldVisibility}
+                  disabled={!editMode}
                 >
                   <FileUpload
                     label="Upload Resume (PDF)"
                     onDrop={handleFileDrop('resume')}
                     file={files.resume}
                     className="col-span-2"
+                    disabled={!editMode}
                   />
-                  {files.resume && (
+                  {files.resume && editMode && (
                     <button
                       type="button"
                       onClick={() => handleRemoveFile('resume')}
@@ -1071,6 +1080,7 @@ const handleSubmit = async (e) => {
                   fieldName="profilePicture" 
                   formData={formData} 
                   handleFieldVisibility={handleFieldVisibility}
+                  disabled={!editMode}
                 >
                   <FileUpload
                     label="Upload Profile Picture (Image)"
@@ -1078,8 +1088,9 @@ const handleSubmit = async (e) => {
                     file={files.profilePicture}
                     className="col-span-2"
                     accept="image/*"
+                    disabled={!editMode}
                   />
-                  {files.profilePicture && (
+                  {files.profilePicture && editMode && (
                     <button
                       type="button"
                       onClick={() => handleRemoveFile('profilePicture')}
@@ -1099,12 +1110,14 @@ const handleSubmit = async (e) => {
                   fieldName="shiftPreferences" 
                   formData={formData} 
                   handleFieldVisibility={handleFieldVisibility}
+                  disabled={!editMode}
                 >
                   <CheckboxGroup
                     legend="Shift Preferences"
                     options={SHIFT_PREFERENCES}
                     selectedOptions={formData.personal.shiftPreferences}
                     onChange={opt => handleCheckboxChange("shiftPreferences", opt)}
+                    disabled={!editMode}
                   />
                 </FieldWrapper>
               </div>
@@ -1114,19 +1127,21 @@ const handleSubmit = async (e) => {
                   fieldName="workAuthorization" 
                   formData={formData} 
                   handleFieldVisibility={handleFieldVisibility}
+                  disabled={!editMode}
                 >
                   <CheckboxGroup
                     legend="Work Authorization"
                     options={WORK_AUTHORIZATIONS}
                     selectedOptions={formData.personal.workAuthorization}
                     onChange={opt => handleCheckboxChange("workAuthorization", opt)}
+                    disabled={!editMode}
                   />
                 </FieldWrapper>
               </div>
             </div>
           </Section>
 
-       
+          {/* Education Section */}
           <Section 
             title="Education" 
             icon={
@@ -1149,7 +1164,7 @@ const handleSubmit = async (e) => {
                       </h3>
                       <p className="text-gray-500 text-xxs">Academic qualifications</p>
                     </div>
-                    {formData.education.length > 1 && (
+                    {formData.education.length > 1 && editMode && (
                       <button
                         type="button"
                         onClick={() => removeDynamicItem("education", edu.id)}
@@ -1169,6 +1184,7 @@ const handleSubmit = async (e) => {
                         fieldName={`education-${index}-degreeTitle`} 
                         formData={formData} 
                         handleFieldVisibility={handleFieldVisibility}
+                        disabled={!editMode}
                       >
                         <Select
                           name="degreeTitle"
@@ -1177,6 +1193,7 @@ const handleSubmit = async (e) => {
                           onChange={(e) => handleDynamicChange("education", index, e)}
                           options={DEGREE_TITLES}
                           defaultOption="Select Degree"
+                          disabled={!editMode}
                         />
                       </FieldWrapper>
 
@@ -1184,11 +1201,13 @@ const handleSubmit = async (e) => {
                         fieldName={`education-${index}-startDate`} 
                         formData={formData} 
                         handleFieldVisibility={handleFieldVisibility}
+                        disabled={!editMode}
                       >
                         <DateInput
                           label="Start Date"
                           value={edu.startDate}
                           onChange={(date) => handleDynamicDateChange("education", index, "startDate", date)}
+                          disabled={!editMode}
                         />
                       </FieldWrapper>
 
@@ -1196,45 +1215,48 @@ const handleSubmit = async (e) => {
                         fieldName={`education-${index}-endDate`} 
                         formData={formData} 
                         handleFieldVisibility={handleFieldVisibility}
+                        disabled={!editMode}
                       >
                         <DateInput
                           label="End Date"
                           value={edu.endDate}
                           onChange={(date) => handleDynamicDateChange("education", index, "endDate", date)}
+                          disabled={!editMode}
                         />
                       </FieldWrapper>
                     </div>
 
                     <div className="space-y-2">
-                 
-<FieldWrapper 
-  fieldName={`education-${index}-institute`} 
-  formData={formData} 
-  handleFieldVisibility={handleFieldVisibility}
->
-  <Select
-    name="institute"
-    label="Institute"
-    value={edu.institute}
-    onChange={(e) => handleDynamicChange("education", index, e)}
-    options={INSTITUTES}
-    defaultOption="Select Institute"
-    required
-  />
-</FieldWrapper>
-
-
+                      <FieldWrapper 
+                        fieldName={`education-${index}-institute`} 
+                        formData={formData} 
+                        handleFieldVisibility={handleFieldVisibility}
+                        disabled={!editMode}
+                      >
+                        <Select
+                          name="institute"
+                          label="Institute"
+                          value={edu.institute}
+                          onChange={(e) => handleDynamicChange("education", index, e)}
+                          options={INSTITUTES}
+                          defaultOption="Select Institute"
+                          required
+                          disabled={!editMode}
+                        />
+                      </FieldWrapper>
 
                       <FieldWrapper 
                         fieldName={`education-${index}-website`} 
                         formData={formData} 
                         handleFieldVisibility={handleFieldVisibility}
+                        disabled={!editMode}
                       >
                         <Input
                           name="website"
                           label="Institute Website" 
                           value={edu.website}
                           onChange={(e) => handleDynamicChange("education", index, e)}
+                          disabled={!editMode}
                         />
                       </FieldWrapper>
 
@@ -1242,14 +1264,16 @@ const handleSubmit = async (e) => {
                         fieldName={`education-${index}-degreeFile`} 
                         formData={formData} 
                         handleFieldVisibility={handleFieldVisibility}
+                        disabled={!editMode}
                       >
                         <FileUpload
                           label="Upload Degree (PDF/Image)"
                           onDrop={acceptedFiles => handleDynamicFileChange("education", index, { target: { files: acceptedFiles } })}
                           file={edu.degreeFile}
                           className="col-span-2"
+                          disabled={!editMode}
                         />
-                        {edu.degreeFile && (
+                        {edu.degreeFile && editMode && (
                           <button
                             type="button"
                             onClick={() => handleDynamicFileChange("education", index, { target: { files: [] } })}
@@ -1267,20 +1291,22 @@ const handleSubmit = async (e) => {
                 </div>
               ))}
 
-              <button
-                type="button"
-                onClick={() => addNewEntry("education")}
-                className="w-full py-2 px-3 bg-white text-[#f4793d] rounded hover:bg-blue-50 text-xs font-medium border border-dashed border-gray-200 flex items-center justify-center gap-1 hover:border-[#f4793d]"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                </svg>
-                Add Education
-              </button>
+              {editMode && (
+                <button
+                  type="button"
+                  onClick={() => addNewEntry("education")}
+                  className="w-full py-2 px-3 bg-white text-[#f4793d] rounded hover:bg-blue-50 text-xs font-medium border border-dashed border-gray-200 flex items-center justify-center gap-1 hover:border-[#f4793d]"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                  Add Education
+                </button>
+              )}
             </div>
           </Section>
 
-          
+          {/* Experience Section */}
           <Section 
             title="Experience" 
             icon={
@@ -1301,7 +1327,7 @@ const handleSubmit = async (e) => {
                       </h3>
                       <p className="text-gray-500 text-xxs">Work experience</p>
                     </div>
-                    {formData.experience.length > 1 && (
+                    {formData.experience.length > 1 && editMode && (
                       <button
                         type="button"
                         onClick={() => removeDynamicItem("experience", exp.id)}
@@ -1321,6 +1347,7 @@ const handleSubmit = async (e) => {
                         fieldName={`experience-${index}-jobTitle`} 
                         formData={formData} 
                         handleFieldVisibility={handleFieldVisibility}
+                        disabled={!editMode}
                       >
                         <Select
                           name="jobTitle"
@@ -1329,6 +1356,7 @@ const handleSubmit = async (e) => {
                           onChange={(e) => handleDynamicChange("experience", index, e)}
                           options={JOB_TITLES}
                           defaultOption="Select Job Title"
+                          disabled={!editMode}
                         />
                       </FieldWrapper>
 
@@ -1336,11 +1364,13 @@ const handleSubmit = async (e) => {
                         fieldName={`experience-${index}-startDate`} 
                         formData={formData} 
                         handleFieldVisibility={handleFieldVisibility}
+                        disabled={!editMode}
                       >
                         <DateInput
                           label="Start Date"
                           value={exp.startDate}
                           onChange={(date) => handleDynamicDateChange("experience", index, "startDate", date)}
+                          disabled={!editMode}
                         />
                       </FieldWrapper>
 
@@ -1348,30 +1378,33 @@ const handleSubmit = async (e) => {
                         fieldName={`experience-${index}-endDate`} 
                         formData={formData} 
                         handleFieldVisibility={handleFieldVisibility}
+                        disabled={!editMode}
                       >
                         <DateInput
                           label="End Date"
                           value={exp.endDate}
                           onChange={(date) => handleDynamicDateChange("experience", index, "endDate", date)}
+                          disabled={!editMode}
                         />
                       </FieldWrapper>
 
-                 <FieldWrapper 
-  fieldName={`experience-${index}-company`} 
-  formData={formData} 
-  handleFieldVisibility={handleFieldVisibility}
->
-  <Select
-    name="company"
-    label="Company"
-    value={exp.company}
-    onChange={(e) => handleDynamicChange("experience", index, e)}
-    options={COMPANIES}
-    defaultOption="Select Company"
-    required
-  />
-</FieldWrapper>
-
+                      <FieldWrapper 
+                        fieldName={`experience-${index}-company`} 
+                        formData={formData} 
+                        handleFieldVisibility={handleFieldVisibility}
+                        disabled={!editMode}
+                      >
+                        <Select
+                          name="company"
+                          label="Company"
+                          value={exp.company}
+                          onChange={(e) => handleDynamicChange("experience", index, e)}
+                          options={COMPANIES}
+                          defaultOption="Select Company"
+                          required
+                          disabled={!editMode}
+                        />
+                      </FieldWrapper>
                     </div>
 
                     <div className="space-y-2">
@@ -1379,38 +1412,45 @@ const handleSubmit = async (e) => {
                         fieldName={`experience-${index}-website`} 
                         formData={formData} 
                         handleFieldVisibility={handleFieldVisibility}
+                        disabled={!editMode}
                       >
                         <Input
                           name="website"
                           label="Company Website"
                           value={exp.website}
                           onChange={(e) => handleDynamicChange("experience", index, e)}
+                          disabled={!editMode}
                         />
                       </FieldWrapper>
-<FieldWrapper 
-  fieldName={`experience-${index}-experienceFile`} 
-  formData={formData} 
-  handleFieldVisibility={handleFieldVisibility}
->
-  <FileUpload
-    label="Upload Experience Letter (PDF only)"
-    onDrop={acceptedFiles => handleDynamicFileChange("experience", index, { target: { files: acceptedFiles } })}
-    file={exp.experienceFile}
-    className="col-span-2"
-    accept="application/pdf"
-  />
-</FieldWrapper>
+
+                      <FieldWrapper 
+                        fieldName={`experience-${index}-experienceFile`} 
+                        formData={formData} 
+                        handleFieldVisibility={handleFieldVisibility}
+                        disabled={!editMode}
+                      >
+                        <FileUpload
+                          label="Upload Experience Letter (PDF only)"
+                          onDrop={acceptedFiles => handleDynamicFileChange("experience", index, { target: { files: acceptedFiles } })}
+                          file={exp.experienceFile}
+                          className="col-span-2"
+                          accept="application/pdf"
+                          disabled={!editMode}
+                        />
+                      </FieldWrapper>
 
                       <FieldWrapper 
                         fieldName={`experience-${index}-jobFunctions`} 
                         formData={formData} 
                         handleFieldVisibility={handleFieldVisibility}
+                        disabled={!editMode}
                       >
                         <CheckboxGroup
                           legend="Job Functions"
                           options={JOB_FUNCTIONS}
                           selectedOptions={exp.jobFunctions}
                           onChange={(opt) => handleDynamicCheckboxChange("experience", index, "jobFunctions", opt)}
+                          disabled={!editMode}
                         />
                       </FieldWrapper>
 
@@ -1418,6 +1458,7 @@ const handleSubmit = async (e) => {
                         fieldName={`experience-${index}-industry`} 
                         formData={formData} 
                         handleFieldVisibility={handleFieldVisibility}
+                        disabled={!editMode}
                       >
                         <Select
                           name="industry"
@@ -1426,6 +1467,7 @@ const handleSubmit = async (e) => {
                           onChange={(e) => handleDynamicChange("experience", index, e)}
                           options={INDUSTRIES}
                           defaultOption="Select Industry"
+                          disabled={!editMode}
                         />
                       </FieldWrapper>
                     </div>
@@ -1433,45 +1475,38 @@ const handleSubmit = async (e) => {
                 </div>
               ))}
 
-              <button
-                type="button"
-                onClick={() => addNewEntry("experience")}
-                className="w-full py-2 px-3 bg-white text-[#f4793d] rounded hover:bg-blue-50 text-xs font-medium border border-dashed border-gray-200 flex items-center justify-center gap-1 hover:border-[#f4793d]"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                </svg>
-                Add Experience
-              </button>
+              {editMode && (
+                <button
+                  type="button"
+                  onClick={() => addNewEntry("experience")}
+                  className="w-full py-2 px-3 bg-white text-[#f4793d] rounded hover:bg-blue-50 text-xs font-medium border border-dashed border-gray-200 flex items-center justify-center gap-1 hover:border-[#f4793d]"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                  Add Experience
+                </button>
+              )}
             </div>
           </Section>
 
-          <div className="flex justify-center pt-4">
-            <button
-              type="submit"
-              disabled={loading}
-              className={`px-6 py-2.5 bg-gradient-to-r from-[#f4793d] to-[#ff8748] text-white rounded hover:shadow transition-all text-sm font-semibold shadow flex items-center gap-1 ${
-                loading ? 'opacity-70 cursor-not-allowed' : ''
-              }`}
-            >
-              {loading ? (
-                'Submitting...'
-              ) : (
-                <>
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  {profile ? 'Update Profile' : 'Complete Profile'}
-                </>
-              )}
-            </button>
-          </div>
+          {editMode && (
+            <div className="flex justify-center pt-4">
+              <button
+                type="submit"
+                className="px-6 py-2.5 bg-gradient-to-r from-[#f4793d] to-[#ff8748] text-white rounded hover:shadow transition-all text-sm font-semibold shadow flex items-center gap-1"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                {profileId ? 'Update Profile' : 'Submit Profile'}
+              </button>
+            </div>
+          )}
         </form>
       </div>
     </div>
   );
 };
 
-export default function Home() {
-  return <UserForm />;
-}
+export default UserForm;

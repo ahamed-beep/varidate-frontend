@@ -1,10 +1,13 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { CheckCircle } from "lucide-react";
 
 function SuccessMessage() {
   const navigate = useNavigate();
+
+  
+  
 
   const handleGoBack = () => {
     navigate(-1);
