@@ -1,6 +1,5 @@
 'use client';
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchProfileById, updateBadgeScores } from '../Redux/profile';
 
@@ -30,7 +29,7 @@ const RadioGroup = ({ name, value, onChange, disabled }) => (
         value="yes" 
         checked={value === 'yes'} 
         onChange={onChange} 
-        disabled={disabled} 
+        disabled={disabled}
         className="mr-1"
       />
       Yes
@@ -42,7 +41,7 @@ const RadioGroup = ({ name, value, onChange, disabled }) => (
         value="no" 
         checked={value === 'no'} 
         onChange={onChange} 
-        disabled={disabled} 
+        disabled={disabled}
         className="mr-1"
       />
       No
@@ -50,30 +49,40 @@ const RadioGroup = ({ name, value, onChange, disabled }) => (
   </div>
 );
 
-const InfoField = ({ label, value, name, feedback, onFeedbackChange, isValidated, badgeLevel }) => (
-  <div className="py-3">
-    <div className="flex items-center gap-2">
-      <BadgeIcon badgeLevel={badgeLevel} />
-      <div className="w-full">
-        <label className="text-xs text-gray-500 font-medium uppercase tracking-wider block mb-1">{label}</label>
-        <input
-          type="text"
-          value={value || ''}
-          readOnly
-          className="w-full text-sm font-semibold text-gray-900 bg-gray-100 px-3 py-1.5 rounded border border-gray-300 focus:outline-none cursor-not-allowed"
-        />
-        {value && (
-          <RadioGroup
-            name={name}
-            value={feedback[name]}
-            onChange={(e) => onFeedbackChange(name, e.target.value)}
-            disabled={isValidated}
-          />
-        )}
+const InfoField = ({ label, value, name, feedback, onFeedbackChange, isLocked, badgeLevel, visibility }) => {
+  const shouldShowField = visibility === 'Public';
+  
+  return (
+    <div className="py-3">
+      <div className="flex items-center gap-2">
+        <BadgeIcon badgeLevel={badgeLevel} />
+        <div className="w-full">
+          <label className="text-xs text-gray-500 font-medium uppercase tracking-wider block mb-1">{label}</label>
+          {shouldShowField ? (
+            <>
+              <input
+                type="text"
+                value={value || ''}
+                readOnly
+                className="w-full text-sm font-semibold text-gray-900 bg-gray-100 px-3 py-1.5 rounded border border-gray-300 focus:outline-none cursor-not-allowed"
+              />
+              {value && (
+                <RadioGroup
+                  name={name}
+                  value={feedback[name]}
+                  onChange={(e) => onFeedbackChange(name, e.target.value)}
+                  disabled={isLocked}
+                />
+              )}
+            </>
+          ) : (
+            <div className="text-sm text-gray-500 italic">This field is private</div>
+          )}
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 const DocumentIcon = ({ className }) => (
   <svg className={className} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
@@ -96,17 +105,18 @@ const SubmissionModal = ({ onClose }) => (
   </div>
 );
 
-const ProfileValidatorApp = () => {
-  const { id } = useParams();
+const ProfileValidatorApp = ({ id, onBack }) => {
   const dispatch = useDispatch();
-  const { selectedProfile, loading, error } = useSelector((state) => state.profile);
+  const { selectedProfile, loading, error, updatedProfile } = useSelector((state) => state.profile);
 
   const [feedback, setFeedback] = useState({});
+  const [originalFeedback, setOriginalFeedback] = useState({});
   const [showLetter, setShowLetter] = useState({});
   const [showDegree, setShowDegree] = useState({});
-  const [isValidated, setIsValidated] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [showSubmissionModal, setShowSubmissionModal] = useState(false);
   const [submitError, setSubmitError] = useState(null);
+  const [hasVoted, setHasVoted] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -114,38 +124,140 @@ const ProfileValidatorApp = () => {
     }
   }, [id, dispatch]);
 
+  useEffect(() => {
+    if (selectedProfile) {
+      const voterId = localStorage.getItem('userId');
+      const votedFields = getVotedFields(selectedProfile, voterId);
+      
+      if (votedFields.length > 0) {
+        setHasVoted(true);
+        const initialFeedback = {};
+        votedFields.forEach(field => {
+          initialFeedback[field.path] = field.voteValue;
+        });
+        setFeedback(initialFeedback);
+        setOriginalFeedback(initialFeedback);
+      }
+    }
+  }, [selectedProfile]);
+
+  const getVotedFields = (profile, voterId) => {
+    if (!profile || !voterId) return [];
+    
+    const votedFields = [];
+    
+    const rootFields = [
+      'name', 'fatherName', 'gender', 'dob', 'cnic', 'profilePicture',
+      'mobile', 'email', 'address', 'city', 'country', 'nationality',
+      'residentStatus', 'maritalStatus', 'shiftPreferences', 'workAuthorization',
+      'resume'
+    ];
+    
+    rootFields.forEach(field => {
+      const votedBy = profile[`${field}VotedBy`];
+      if (votedBy && votedBy.map(String).includes(voterId)) {
+        votedFields.push({
+          path: `${field}BadgeScore`,
+          voteValue: 'yes'
+        });
+      }
+    });
+    
+    profile.education?.forEach((edu, eduIndex) => {
+      const eduFields = [
+        'degreeTitle', 'institute', 'startDate', 'endDate', 'degreeFile', 'website'
+      ];
+      
+      eduFields.forEach(field => {
+        const votedBy = edu[`${field}VotedBy`];
+        if (votedBy && votedBy.map(String).includes(voterId)) {
+          votedFields.push({
+            path: `edu-${field}-${eduIndex}`,
+            voteValue: 'yes'
+          });
+        }
+      });
+    });
+    
+    profile.experience?.forEach((exp, expIndex) => {
+      const expFields = [
+        'jobTitle', 'company', 'startDate', 'endDate', 'experienceFile',
+        'jobFunctions', 'industry', 'website'
+      ];
+      
+      expFields.forEach(field => {
+        const votedBy = exp[`${field}VotedBy`];
+        if (votedBy && votedBy.map(String).includes(voterId)) {
+          votedFields.push({
+            path: `exp-${field}-${expIndex}`,
+            voteValue: 'yes'
+          });
+        }
+      });
+    });
+    
+    return votedFields;
+  };
+
   const handleFeedbackChange = (key, value) => {
-    if (isValidated) return;
+    if (hasVoted && !isEditing) return;
     setFeedback((prev) => ({ ...prev, [key]: value }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitError(null);
-    
+
+    const voterId = localStorage.getItem('userId');
+    if (!voterId) {
+      setSubmitError("Voter ID not found. Please log in.");
+      return;
+    }
+
     try {
-      const votes = {};
-      Object.keys(feedback).forEach(key => {
-        votes[key] = feedback[key];
-      });
+      const votesPayload = { voterId };
+      
+      if (isEditing) {
+        const changedVotes = {};
+        Object.keys(feedback).forEach(key => {
+          if (originalFeedback[key] !== feedback[key]) {
+            changedVotes[key] = feedback[key];
+          }
+        });
+        
+        if (Object.keys(changedVotes).length === 0) {
+          setIsEditing(false);
+          return;
+        }
+        
+        Object.assign(votesPayload, changedVotes);
+      } else {
+        Object.assign(votesPayload, feedback);
+      }
 
       const resultAction = await dispatch(
         updateBadgeScores({
           id: selectedProfile._id,
-          votes
+          votes: votesPayload
         })
       );
 
       if (updateBadgeScores.fulfilled.match(resultAction)) {
-        setIsValidated(true);
         setShowSubmissionModal(true);
-      } else if (updateBadgeScores.rejected.match(resultAction)) {
-        throw new Error(resultAction.payload?.message || 'Failed to update badge scores');
+        setHasVoted(true);
+        setIsEditing(false);
+        setOriginalFeedback(feedback);
+      } else {
+        throw new Error(resultAction.payload?.error || resultAction.payload?.message || 'Failed to update badge scores');
       }
     } catch (error) {
       console.error('Update error:', error);
       setSubmitError(error.message);
     }
+  };
+
+  const handleEdit = () => {
+    setIsEditing(true);
   };
 
   const toggleFile = (setter, index) => setter((prev) => ({ ...prev, [index]: !prev[index] }));
@@ -154,74 +266,191 @@ const ProfileValidatorApp = () => {
   if (error) return <div className="flex justify-center items-center min-h-screen text-red-600">Error: {error}</div>;
   if (!selectedProfile) return <div className="flex justify-center items-center min-h-screen text-gray-600">Profile not found.</div>;
 
-  const currentProfile = selectedProfile;
+  const currentProfile = updatedProfile || selectedProfile;
 
-  // Helper function to safely access nested badge levels
   const getNestedBadge = (arrayName, index, fieldName) => {
     if (!currentProfile[arrayName] || !currentProfile[arrayName][index]) return 'Black';
     return currentProfile[arrayName][index][`${fieldName}Badge`] || 'Black';
   };
 
+  const getNestedVisibility = (arrayName, index, fieldName) => {
+    if (!currentProfile[arrayName] || !currentProfile[arrayName][index]) return 'Private';
+    return currentProfile[arrayName][index][`${fieldName}Visibility`] || 'Private';
+  };
+
   // Personal Info Fields
   const personalFields = [
-    { label: 'Name', value: currentProfile.name, key: 'nameBadgeScore', badgeLevel: currentProfile.nameBadge },
-    { label: "Father's Name", value: currentProfile.fatherName, key: 'fatherNameBadgeScore', badgeLevel: currentProfile.fatherNameBadge },
-    { label: 'Gender', value: currentProfile.gender, key: 'genderBadgeScore', badgeLevel: currentProfile.genderBadge },
-  { 
-  label: 'Date of Birth', 
-  value: currentProfile.dob ? new Date(currentProfile.dob).toLocaleDateString() : '', 
-  key: 'dobBadgeScore', 
-  badgeLevel: currentProfile.dobBadge 
-},
-    { label: 'CNIC', value: currentProfile.cnic, key: 'cnicBadgeScore', badgeLevel: currentProfile.cnicBadge },
+    { 
+      label: 'Name', 
+      value: currentProfile.name, 
+      key: 'nameBadgeScore', 
+      badgeLevel: currentProfile.nameBadge,
+      visibility: currentProfile.nameVisibility 
+    },
+    { 
+      label: "Father's Name", 
+      value: currentProfile.fatherName, 
+      key: 'fatherNameBadgeScore', 
+      badgeLevel: currentProfile.fatherNameBadge,
+      visibility: currentProfile.fatherNameVisibility 
+    },
+    { 
+      label: 'Gender', 
+      value: currentProfile.gender, 
+      key: 'genderBadgeScore', 
+      badgeLevel: currentProfile.genderBadge,
+      visibility: currentProfile.genderVisibility 
+    },
+    {
+      label: 'Date of Birth',
+      value: currentProfile.dob ? new Date(currentProfile.dob).toLocaleDateString() : '',
+      key: 'dobBadgeScore',
+      badgeLevel: currentProfile.dobBadge,
+      visibility: currentProfile.dobVisibility
+    },
+    { 
+      label: 'CNIC', 
+      value: currentProfile.cnic, 
+      key: 'cnicBadgeScore', 
+      badgeLevel: currentProfile.cnicBadge,
+      visibility: currentProfile.cnicVisibility 
+    },
+    { 
+      label: 'Profile Picture', 
+      value: currentProfile.profilePicture ? 'Uploaded' : '', 
+      key: 'profilePictureBadgeScore', 
+      badgeLevel: currentProfile.profilePictureBadge,
+      visibility: currentProfile.profilePictureVisibility 
+    },
+    { 
+      label: 'Marital Status', 
+      value: currentProfile.maritalStatus, 
+      key: 'maritalStatusBadgeScore', 
+      badgeLevel: currentProfile.maritalStatusBadge,
+      visibility: currentProfile.maritalStatusVisibility 
+    },
   ];
 
   // Contact Info Fields
   const contactFields = [
-    { label: 'Email', value: currentProfile.email, key: 'emailBadgeScore', badgeLevel: currentProfile.emailBadge },
-    { label: 'Phone', value: currentProfile.mobile, key: 'mobileBadgeScore', badgeLevel: currentProfile.mobileBadge },
-    { label: 'Address', value: currentProfile.address, key: 'addressBadgeScore', badgeLevel: currentProfile.addressBadge },
-    { label: 'City', value: currentProfile.city, key: 'cityBadgeScore', badgeLevel: currentProfile.cityBadge },
-    { label: 'Country', value: currentProfile.country, key: 'countryBadgeScore', badgeLevel: currentProfile.countryBadge },
+    { 
+      label: 'Email', 
+      value: currentProfile.email, 
+      key: 'emailBadgeScore', 
+      badgeLevel: currentProfile.emailBadge,
+      visibility: currentProfile.emailVisibility 
+    },
+    { 
+      label: 'Phone', 
+      value: currentProfile.mobile, 
+      key: 'mobileBadgeScore', 
+      badgeLevel: currentProfile.mobileBadge,
+      visibility: currentProfile.mobileVisibility 
+    },
+    { 
+      label: 'Address', 
+      value: currentProfile.address, 
+      key: 'addressBadgeScore', 
+      badgeLevel: currentProfile.addressBadge,
+      visibility: currentProfile.addressVisibility 
+    },
+    { 
+      label: 'City', 
+      value: currentProfile.city, 
+      key: 'cityBadgeScore', 
+      badgeLevel: currentProfile.cityBadge,
+      visibility: currentProfile.cityVisibility 
+    },
+    { 
+      label: 'Country', 
+      value: currentProfile.country, 
+      key: 'countryBadgeScore', 
+      badgeLevel: currentProfile.countryBadge,
+      visibility: currentProfile.countryVisibility 
+    },
   ];
 
   // Other Fields
   const otherFields = [
-    { label: 'Nationality', value: currentProfile.nationality, key: 'nationalityBadgeScore', badgeLevel: currentProfile.nationalityBadge },
-    { label: 'Resident Status', value: currentProfile.residentStatus, key: 'residentStatusBadgeScore', badgeLevel: currentProfile.residentStatusBadge },
-    { label: 'Verification Level', value: currentProfile.verificationLevel },
-    { label: 'Website', value: currentProfile.website, key: 'websiteBadgeScore', badgeLevel: currentProfile.websiteBadge },
+    { 
+      label: 'Nationality', 
+      value: currentProfile.nationality, 
+      key: 'nationalityBadgeScore', 
+      badgeLevel: currentProfile.nationalityBadge,
+      visibility: currentProfile.nationalityVisibility 
+    },
+    { 
+      label: 'Resident Status', 
+      value: currentProfile.residentStatus, 
+      key: 'residentStatusBadgeScore', 
+      badgeLevel: currentProfile.residentStatusBadge,
+      visibility: currentProfile.residentStatusVisibility 
+    },
     { 
       label: 'Shift Preferences', 
       value: currentProfile.shiftPreferences?.join(', '), 
-      key: 'shiftPreferencesBadgeScore',
-      badgeLevel: currentProfile.shiftPreferencesBadge 
+      key: 'shiftPreferencesBadgeScore', 
+      badgeLevel: currentProfile.shiftPreferencesBadge,
+      visibility: currentProfile.shiftPreferencesVisibility 
     },
     { 
       label: 'Work Authorization', 
       value: currentProfile.workAuthorization?.join(', '), 
-      key: 'workAuthorizationBadgeScore',
-      badgeLevel: currentProfile.workAuthorizationBadge 
-    }
+      key: 'workAuthorizationBadgeScore', 
+      badgeLevel: currentProfile.workAuthorizationBadge,
+      visibility: currentProfile.workAuthorizationVisibility 
+    },
+    { 
+      label: 'Resume', 
+      value: currentProfile.resume ? 'Uploaded' : '', 
+      key: 'resumeBadgeScore', 
+      badgeLevel: currentProfile.resumeBadge,
+      visibility: currentProfile.resumeVisibility 
+    },
   ];
 
-  // Filter out empty fields
   const filterFields = (fields) => fields.filter(field => field.value !== undefined && field.value !== null && field.value !== '');
 
   return (
     <>
       {showSubmissionModal && <SubmissionModal onClose={() => setShowSubmissionModal(false)} />}
-      <main className="bg-orange-50 min-h-screen p-4 sm:p-6 lg:p-8">
+      <main className=" min-h-screen p-4 sm:p-6 lg:p-8">
+        <div className="mb-4">
+          <button 
+            onClick={onBack}
+            className="flex items-center text-[#f4793d] hover:text-orange-700"
+          >
+            <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            Back to Directory
+          </button>
+        </div>
+        
         <form onSubmit={handleSubmit} className="bg-white rounded-lg max-w-4xl mx-auto p-6">
           <div className="flex items-center gap-4 mb-6">
-            <img 
-              src={currentProfile.profilePicture} 
-              alt="Profile" 
-              className="w-16 h-16 rounded-full object-cover" 
-            />
+            {currentProfile.profilePictureVisibility === 'Public' ? (
+              <img
+                src={currentProfile.profilePicture}
+                alt="Profile"
+                className="w-16 h-16 rounded-full object-cover"
+              />
+            ) : (
+              <div className="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center">
+                <span className="text-xs text-gray-500">Hidden</span>
+              </div>
+            )}
             <div>
-              <h1 className="text-2xl font-semibold text-gray-900">{currentProfile.name}</h1>
-              <p className="text-sm text-gray-600">{currentProfile.experience?.[0]?.jobTitle}</p>
+              <h1 className="text-2xl font-semibold text-gray-900">
+                {currentProfile.nameVisibility === 'Public' 
+                  ? currentProfile.name 
+                  : 'Anonymous User'}
+              </h1>
+              <p className="text-sm text-gray-600">
+                {currentProfile.experience?.[0]?.jobTitleVisibility === 'Public' 
+                  ? currentProfile.experience?.[0]?.jobTitle 
+                  : 'Hidden'}
+              </p>
             </div>
           </div>
 
@@ -236,15 +465,16 @@ const ProfileValidatorApp = () => {
               <div>
                 <h3 className="text-lg font-semibold text-orange-600 mb-4">Personal Information</h3>
                 {filterFields(personalFields).map((field) => (
-                  <InfoField 
+                  <InfoField
                     key={field.key}
                     label={field.label}
                     value={field.value}
                     name={field.key}
                     feedback={feedback}
                     onFeedbackChange={handleFeedbackChange}
-                    isValidated={isValidated}
+                    isLocked={hasVoted && !isEditing}
                     badgeLevel={field.badgeLevel}
+                    visibility={field.visibility}
                   />
                 ))}
               </div>
@@ -252,15 +482,16 @@ const ProfileValidatorApp = () => {
               <div>
                 <h3 className="text-lg font-semibold text-orange-600 mb-4">Contact Information</h3>
                 {filterFields(contactFields).map((field) => (
-                  <InfoField 
+                  <InfoField
                     key={field.key}
                     label={field.label}
                     value={field.value}
                     name={field.key}
                     feedback={feedback}
                     onFeedbackChange={handleFeedbackChange}
-                    isValidated={isValidated}
+                    isLocked={hasVoted && !isEditing}
                     badgeLevel={field.badgeLevel}
+                    visibility={field.visibility}
                   />
                 ))}
               </div>
@@ -268,15 +499,16 @@ const ProfileValidatorApp = () => {
               <div>
                 <h3 className="text-lg font-semibold text-orange-600 mb-4">Other Information</h3>
                 {filterFields(otherFields).map((field) => (
-                  <InfoField 
-                    key={field.key || field.label}
+                  <InfoField
+                    key={field.key}
                     label={field.label}
                     value={field.value}
                     name={field.key}
                     feedback={feedback}
                     onFeedbackChange={handleFeedbackChange}
-                    isValidated={isValidated}
+                    isLocked={hasVoted && !isEditing}
                     badgeLevel={field.badgeLevel}
+                    visibility={field.visibility}
                   />
                 ))}
               </div>
@@ -287,67 +519,72 @@ const ProfileValidatorApp = () => {
                 <h3 className="text-lg font-semibold text-orange-600">Experience</h3>
                 {currentProfile.experience?.map((exp, i) => (
                   <div key={i} className="mt-4 border-b pb-4">
-                    <InfoField 
-                      label="Job Title" 
-                      value={exp.jobTitle} 
+                    <InfoField
+                      label="Job Title"
+                      value={exp.jobTitle}
                       name={`exp-jobTitle-${i}`}
                       feedback={feedback}
                       onFeedbackChange={handleFeedbackChange}
-                      isValidated={isValidated}
+                      isLocked={hasVoted && !isEditing}
                       badgeLevel={getNestedBadge('experience', i, 'jobTitle')}
+                      visibility={getNestedVisibility('experience', i, 'jobTitle')}
                     />
-                    <InfoField 
-                      label="Company" 
-                      value={exp.company} 
+                    <InfoField
+                      label="Company"
+                      value={exp.company}
                       name={`exp-company-${i}`}
                       feedback={feedback}
                       onFeedbackChange={handleFeedbackChange}
-                      isValidated={isValidated}
+                      isLocked={hasVoted && !isEditing}
                       badgeLevel={getNestedBadge('experience', i, 'company')}
+                      visibility={getNestedVisibility('experience', i, 'company')}
                     />
-                    <InfoField 
-                      label="Industry" 
-                      value={exp.industry} 
+                    <InfoField
+                      label="Industry"
+                      value={exp.industry}
                       name={`exp-industry-${i}`}
                       feedback={feedback}
                       onFeedbackChange={handleFeedbackChange}
-                      isValidated={isValidated}
+                      isLocked={hasVoted && !isEditing}
                       badgeLevel={getNestedBadge('experience', i, 'industry')}
+                      visibility={getNestedVisibility('experience', i, 'industry')}
                     />
-                    <InfoField 
-                      label="Job Functions" 
-                      value={exp.jobFunctions?.join(', ')} 
+                    <InfoField
+                      label="Job Functions"
+                      value={exp.jobFunctions?.join(', ')}
                       name={`exp-jobFunctions-${i}`}
                       feedback={feedback}
                       onFeedbackChange={handleFeedbackChange}
-                      isValidated={isValidated}
+                      isLocked={hasVoted && !isEditing}
                       badgeLevel={getNestedBadge('experience', i, 'jobFunctions')}
+                      visibility={getNestedVisibility('experience', i, 'jobFunctions')}
                     />
-                  <InfoField 
-  label="Start Date" 
-  value={new Date(exp.startDate).toLocaleDateString()} 
-  name={`exp-startDate-${i}`}
-  feedback={feedback}
-  onFeedbackChange={handleFeedbackChange}
-  isValidated={isValidated}
-  badgeLevel={getNestedBadge('experience', i, 'startDate')}
-/>
-<InfoField 
-  label="End Date" 
-  value={exp.endDate ? new Date(exp.endDate).toLocaleDateString() : 'Present'} 
-  name={`exp-endDate-${i}`}
-  feedback={feedback}
-  onFeedbackChange={handleFeedbackChange}
-  isValidated={isValidated}
-  badgeLevel={getNestedBadge('experience', i, 'endDate')}
-/>
-                  
+                    <InfoField
+                      label="Start Date"
+                      value={new Date(exp.startDate).toLocaleDateString()}
+                      name={`exp-startDate-${i}`}
+                      feedback={feedback}
+                      onFeedbackChange={handleFeedbackChange}
+                      isLocked={hasVoted && !isEditing}
+                      badgeLevel={getNestedBadge('experience', i, 'startDate')}
+                      visibility={getNestedVisibility('experience', i, 'startDate')}
+                    />
+                    <InfoField
+                      label="End Date"
+                      value={exp.endDate ? new Date(exp.endDate).toLocaleDateString() : 'Present'}
+                      name={`exp-endDate-${i}`}
+                      feedback={feedback}
+                      onFeedbackChange={handleFeedbackChange}
+                      isLocked={hasVoted && !isEditing}
+                      badgeLevel={getNestedBadge('experience', i, 'endDate')}
+                      visibility={getNestedVisibility('experience', i, 'endDate')}
+                    />
 
                     {exp.experienceFile && (
                       <div className="mt-3">
-                        <button 
-                          type="button" 
-                          onClick={() => toggleFile(setShowLetter, i)} 
+                        <button
+                          type="button"
+                          onClick={() => toggleFile(setShowLetter, i)}
                           className="flex items-center gap-2 text-sm text-orange-600 hover:text-orange-800 transition"
                         >
                           <DocumentIcon className="w-4 h-4" />
@@ -356,9 +593,9 @@ const ProfileValidatorApp = () => {
                         {showLetter[i] && (
                           <div className="mt-2">
                             {exp.experienceFile.endsWith('.pdf') ? (
-                              <iframe 
-                                src={exp.experienceFile} 
-                                className="w-full h-96 rounded border" 
+                              <iframe
+                                src={exp.experienceFile}
+                                className="w-full h-96 rounded border"
                                 title="Experience Document"
                               />
                             ) : (
@@ -376,49 +613,52 @@ const ProfileValidatorApp = () => {
                 <h3 className="text-lg font-semibold text-orange-600">Education</h3>
                 {currentProfile.education?.map((edu, i) => (
                   <div key={i} className="mt-4 border-b pb-4">
-                    <InfoField 
-                      label="Degree" 
-                      value={edu.degreeTitle} 
+                    <InfoField
+                      label="Degree"
+                      value={edu.degreeTitle}
                       name={`edu-degreeTitle-${i}`}
                       feedback={feedback}
                       onFeedbackChange={handleFeedbackChange}
-                      isValidated={isValidated}
+                      isLocked={hasVoted && !isEditing}
                       badgeLevel={getNestedBadge('education', i, 'degreeTitle')}
+                      visibility={getNestedVisibility('education', i, 'degreeTitle')}
                     />
-                    <InfoField 
-                      label="Institute" 
-                      value={edu.institute} 
+                    <InfoField
+                      label="Institute"
+                      value={edu.institute}
                       name={`edu-institute-${i}`}
                       feedback={feedback}
                       onFeedbackChange={handleFeedbackChange}
-                      isValidated={isValidated}
+                      isLocked={hasVoted && !isEditing}
                       badgeLevel={getNestedBadge('education', i, 'institute')}
+                      visibility={getNestedVisibility('education', i, 'institute')}
                     />
-                 <InfoField 
-  label="Start Date" 
-  value={new Date(edu.startDate).toLocaleDateString()} 
-  name={`edu-startDate-${i}`}
-  feedback={feedback}
-  onFeedbackChange={handleFeedbackChange}
-  isValidated={isValidated}
-  badgeLevel={getNestedBadge('education', i, 'startDate')}
-/>
-<InfoField 
-  label="End Date" 
-  value={new Date(edu.endDate).toLocaleDateString()} 
-  name={`edu-endDate-${i}`}
-  feedback={feedback}
-  onFeedbackChange={handleFeedbackChange}
-  isValidated={isValidated}
-  badgeLevel={getNestedBadge('education', i, 'endDate')}
-/>
-                   
+                    <InfoField
+                      label="Start Date"
+                      value={new Date(edu.startDate).toLocaleDateString()}
+                      name={`edu-startDate-${i}`}
+                      feedback={feedback}
+                      onFeedbackChange={handleFeedbackChange}
+                      isLocked={hasVoted && !isEditing}
+                      badgeLevel={getNestedBadge('education', i, 'startDate')}
+                      visibility={getNestedVisibility('education', i, 'startDate')}
+                    />
+                    <InfoField
+                      label="End Date"
+                      value={new Date(edu.endDate).toLocaleDateString()}
+                      name={`edu-endDate-${i}`}
+                      feedback={feedback}
+                      onFeedbackChange={handleFeedbackChange}
+                      isLocked={hasVoted && !isEditing}
+                      badgeLevel={getNestedBadge('education', i, 'endDate')}
+                      visibility={getNestedVisibility('education', i, 'endDate')}
+                    />
 
                     {edu.degreeFile && (
                       <div className="mt-3">
-                        <button 
-                          type="button" 
-                          onClick={() => toggleFile(setShowDegree, i)} 
+                        <button
+                          type="button"
+                          onClick={() => toggleFile(setShowDegree, i)}
                           className="flex items-center gap-2 text-sm text-orange-600 hover:text-orange-800 transition"
                         >
                           <DocumentIcon className="w-4 h-4" />
@@ -427,9 +667,9 @@ const ProfileValidatorApp = () => {
                         {showDegree[i] && (
                           <div className="mt-2">
                             {edu.degreeFile.endsWith('.pdf') ? (
-                              <iframe 
-                                src={edu.degreeFile} 
-                                className="w-full h-96 rounded border" 
+                              <iframe
+                                src={edu.degreeFile}
+                                className="w-full h-96 rounded border"
                                 title="Degree Certificate"
                               />
                             ) : (
@@ -442,45 +682,26 @@ const ProfileValidatorApp = () => {
                   </div>
                 ))}
               </div>
-
-              {currentProfile.resume && (
-                <div>
-                  <h3 className="text-lg font-semibold text-orange-600">Resume</h3>
-                  <div className="mt-3">
-                    <button 
-                      type="button" 
-                      onClick={() => toggleFile(setShowLetter, 'resume')} 
-                      className="flex items-center gap-2 text-sm text-orange-600 hover:text-orange-800 transition"
-                    >
-                      <DocumentIcon className="w-4 h-4" />
-                      {showLetter['resume'] ? 'Hide' : 'View'} Resume
-                    </button>
-                    {showLetter['resume'] && (
-                      <div className="mt-2">
-                        {currentProfile.resume.endsWith('.pdf') ? (
-                          <iframe 
-                            src={currentProfile.resume} 
-                            className="w-full h-96 rounded border" 
-                            title="Resume"
-                          />
-                        ) : (
-                          <img src={currentProfile.resume} alt="Resume" className="w-full rounded" />
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
             </div>
           </div>
 
-          <div className="mt-6 flex justify-end">
+          <div className="mt-6 flex justify-end gap-4">
+            {hasVoted && !isEditing && (
+              <button
+                type="button"
+                onClick={handleEdit}
+                className="bg-gray-600 text-white px-6 py-2 rounded-md hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500"
+              >
+                Edit Validation
+              </button>
+            )}
+            
             <button
               type="submit"
-              disabled={isValidated || Object.keys(feedback).length === 0}
+              disabled={(!isEditing && hasVoted) || Object.keys(feedback).length === 0}
               className="bg-orange-600 text-white px-6 py-2 rounded-md hover:bg-orange-700 transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
-              {isValidated ? 'Validation Submitted' : 'Submit Validation'}
+              {hasVoted ? (isEditing ? 'Save Changes' : 'Validation Submitted') : 'Submit Validation'}
             </button>
           </div>
         </form>

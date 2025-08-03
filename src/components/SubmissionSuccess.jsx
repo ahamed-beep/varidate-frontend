@@ -1,17 +1,16 @@
 import React, { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+
 import { motion } from "framer-motion";
 import { CheckCircle } from "lucide-react";
+import { Link } from "react-router";
 
 function SuccessMessage() {
-  const navigate = useNavigate();
+
 
   
   
 
-  const handleGoBack = () => {
-    navigate(-1);
-  };
+  
 
   return (
     <div className="min-h-screen bg-white flex items-center justify-center px-4">
@@ -57,18 +56,22 @@ function SuccessMessage() {
           Your form has been submitted successfully.
         </motion.p>
 
+
         {/* Button */}
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.98 }}
-          onClick={handleGoBack}
+          
           className="transition text-white font-semibold px-6 py-2 rounded-full"
           style={{
             backgroundColor: "#f4793d",
             boxShadow: "0 2px 8px rgba(244, 121, 61, 0.4)",
           }}
-        >
+          >
+            <Link to='/admin'>
+            
           Go Back
+            </Link>
         </motion.button>
       </motion.div>
     </div>

@@ -1,7 +1,7 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axiosinstance from "../Connection/Api";
 
-// Action to submit profile
+
 export const submitProfile = createAsyncThunk(
   "profile/submitProfile",
   async (formData, { rejectWithValue }) => {
@@ -18,10 +18,17 @@ export const submitProfile = createAsyncThunk(
 
 export const fetchPublicProfiles = createAsyncThunk(
   "profile/fetchPublicProfiles",
-  async (_, { rejectWithValue }) => {
+  async (loggedInUserId, { rejectWithValue }) => {
     try {
-      const response = await axiosinstance.get("/profile");
-      console.log(response.data)
+      const response = await axiosinstance.get('/profile', {
+        params: {
+          loggedInUserId: loggedInUserId // Pass as query parameter
+        }
+      });
+      
+      console.log('Fetched profiles:', response.data.profiles);
+      console.log('Excluded userId:', loggedInUserId);
+      
       return response.data;
     } catch (err) {
       return rejectWithValue(err.response?.data || err.message);
@@ -44,11 +51,6 @@ export const getProfileById = createAsyncThunk(
   }
 );
 
-
-// In your Redux/profile.js
-
-
-// Redux/profile.js
 
 export const fetchProfileById = createAsyncThunk(
   "profile/fetchProfileById",
@@ -101,7 +103,7 @@ export const updateBadgeScores = createAsyncThunk(
     }
   }
 );
-// Profile Slice with state management
+
 const profileSlice = createSlice({
   name: "profile",
   initialState: {

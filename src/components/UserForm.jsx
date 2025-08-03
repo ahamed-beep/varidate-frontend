@@ -92,6 +92,12 @@ const newEducationTemplate = {
   institute: "",
   website: "",
   degreeFile: null,
+  degreeTitleVisibility: "Public",
+  instituteVisibility: "Public",
+  startDateVisibility: "Public",
+  endDateVisibility: "Public",
+  websiteVisibility: "Public",
+  degreeFileVisibility: "Public"
 };
 
 const newExperienceTemplate = {
@@ -104,6 +110,14 @@ const newExperienceTemplate = {
   experienceFile: null,
   jobFunctions: [],
   industry: "",
+  jobTitleVisibility: "Public",
+  companyVisibility: "Public",
+  startDateVisibility: "Public",
+  endDateVisibility: "Public",
+  websiteVisibility: "Public",
+  experienceFileVisibility: "Public",
+  jobFunctionsVisibility: "Public",
+  industryVisibility: "Public"
 };
 
 const FileUpload = ({ label, onDrop, file, className = "", disabled = false }) => {
@@ -274,7 +288,7 @@ const CheckboxGroup = ({ legend, options, selectedOptions, onChange, className =
 };
 
 const FieldWrapper = ({ children, fieldName, formData, handleFieldVisibility, isCnicField = false, disabled = false }) => {
-  const visibility = formData.fieldVisibilities[fieldName] || "Private";
+  const visibility = formData.fieldVisibilities?.[fieldName] || "Public";
 
   return (
     <div>
@@ -284,14 +298,14 @@ const FieldWrapper = ({ children, fieldName, formData, handleFieldVisibility, is
           <span className="text-xs font-medium text-slate-600">Visibility:</span>
           <div className="flex gap-2">
             {VISIBILITY_PRESETS.map((option) => (
-              <label key={option} className={`flex items-center gap-1 text-xs cursor-pointer`}>
+              <label key={option} className="flex items-center gap-1 text-xs cursor-pointer">
                 <input
                   type="radio"
                   name={`vis-${fieldName}`}
                   value={option}
                   checked={visibility === option}
                   onChange={() => handleFieldVisibility(fieldName, option)}
-                  className={`w-3 h-3 text-[#f4793d] border-gray-300 focus:ring-[#f4793d]`}
+                  className="w-3 h-3 text-[#f4793d] border-gray-300 focus:ring-[#f4793d]"
                 />
                 <span className="text-slate-700">{option}</span>
               </label>
@@ -310,14 +324,28 @@ const UserForm = () => {
   const [profileId, setProfileId] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [submitted, setSubmitted] = useState(false);
+  const [userName, setUserName] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const userEmail = localStorage.getItem('userEmail') || '';
-  const firstName = localStorage.getItem('firstName') || '';
-  const lastName = localStorage.getItem('lastName') || '';
+
+  useEffect(() => {
+    const storedName = localStorage.getItem('userName');
+    if (storedName) {
+      setUserName(storedName);
+      setFormData(prevData => ({
+        ...prevData,
+        personal: {
+          ...prevData.personal,
+          name: storedName,
+        },
+      }));
+    }
+  }, []);
 
   const [formData, setFormData] = useState({
     personal: {
-      name: `${firstName} ${lastName}`.trim(),
+      name: "",
       mobile: "",
       email: userEmail || "",
       cnic: "",
@@ -344,131 +372,141 @@ const UserForm = () => {
   });
   const [selectedPreset, setSelectedPreset] = useState("");
 
-useEffect(() => {
-  const checkExistingProfile = async () => {
-    try {
-      const userId = localStorage.getItem("userId");
-      const response = await axiosinstance.get(`/profile/user/${userId}`);
-      
-      if (response.data.success) {
-        const profile = response.data.data;
-        setProfileId(profile._id);
-        setEditMode(false);
+ useEffect(() => {
+    const checkExistingProfile = async () => {
+      try {
+        const userId = localStorage.getItem("userId");
+        const response = await axiosinstance.get(`/profile/user/${userId}`);
         
-        // Transform profile data to match form structure
-        const transformedData = {
-          personal: {
-            name: profile.name || `${firstName} ${lastName}`.trim(),
-            mobile: profile.mobile || "",
-            email: profile.email || userEmail,
-            cnic: profile.cnic || "",
-            fatherName: profile.fatherName || "",
-            city: profile.city || "",
-            country: profile.country || "",
-            gender: profile.gender || "",
-            dob: profile.dob ? new Date(profile.dob) : null,
-            nationality: profile.nationality || "",
-            residentStatus: profile.residentStatus || "",
-            maritalStatus: profile.maritalStatus || "",
-            shiftPreferences: profile.shiftPreferences || [],
-            workLocationPreference: profile.workLocationPreference || "",
-            workAuthorization: profile.workAuthorization || [],
-          },
-          fieldVisibilities: profile.fieldVisibilities || {},
-          // Handle education array - ensure all entries are included
-          education: profile.education?.length > 0 
-            ? profile.education.map(edu => ({
-                id: edu._id || Date.now().toString(),
-                degreeTitle: edu.degreeTitle || "",
-                institute: edu.institute || "",
-                startDate: edu.startDate ? new Date(edu.startDate) : null,
-                endDate: edu.endDate ? new Date(edu.endDate) : null,
-                website: edu.website || "",
-                degreeFile: null, // Will be handled separately
-                degreeTitleVisibility: edu.degreeTitleVisibility || "Public",
-                instituteVisibility: edu.instituteVisibility || "Public",
-                startDateVisibility: edu.startDateVisibility || "Public",
-                endDateVisibility: edu.endDateVisibility || "Public",
-                websiteVisibility: edu.websiteVisibility || "Public",
-                degreeFileVisibility: edu.degreeFileVisibility || "Public",
-                verificationLevel: edu.verificationLevel || "Silver",
-                // Include all badge fields
-                degreeTitleBadge: edu.degreeTitleBadge || "Black",
-                degreeTitleBadgeScore: edu.degreeTitleBadgeScore || 0,
-                instituteBadge: edu.instituteBadge || "Black",
-                instituteBadgeScore: edu.instituteBadgeScore || 0,
-                startDateBadge: edu.startDateBadge || "Black",
-                startDateBadgeScore: edu.startDateBadgeScore || 0,
-                endDateBadge: edu.endDateBadge || "Black",
-                endDateBadgeScore: edu.endDateBadgeScore || 0,
-                degreeFileBadge: edu.degreeFileBadge || "Black",
-                degreeFileBadgeScore: edu.degreeFileBadgeScore || 0,
-                websiteBadge: edu.websiteBadge || "Black",
-                websiteBadgeScore: edu.websiteBadgeScore || 0
-              }))
-            : [{ ...newEducationTemplate, id: Date.now().toString() }],
-          // Handle experience array - ensure all entries are included
-          experience: profile.experience?.length > 0 
-            ? profile.experience.map(exp => ({
-                id: exp._id || Date.now().toString(),
-                jobTitle: exp.jobTitle || "",
-                company: exp.company || "",
-                startDate: exp.startDate ? new Date(exp.startDate) : null,
-                endDate: exp.endDate ? new Date(exp.endDate) : null,
-                website: exp.website || "",
-                experienceFile: null, // Will be handled separately
-                jobFunctions: exp.jobFunctions || [],
-                industry: exp.industry || "",
-                jobTitleVisibility: exp.jobTitleVisibility || "Public",
-                companyVisibility: exp.companyVisibility || "Public",
-                startDateVisibility: exp.startDateVisibility || "Public",
-                endDateVisibility: exp.endDateVisibility || "Public",
-                websiteVisibility: exp.websiteVisibility || "Public",
-                experienceFileVisibility: exp.experienceFileVisibility || "Public",
-                jobFunctionsVisibility: exp.jobFunctionsVisibility || "Public",
-                industryVisibility: exp.industryVisibility || "Public",
-                verificationLevel: exp.verificationLevel || "Silver",
-                // Include all badge fields
-                jobTitleBadge: exp.jobTitleBadge || "Black",
-                jobTitleBadgeScore: exp.jobTitleBadgeScore || 0,
-                companyBadge: exp.companyBadge || "Black",
-                companyBadgeScore: exp.companyBadgeScore || 0,
-                startDateBadge: exp.startDateBadge || "Black",
-                startDateBadgeScore: exp.startDateBadgeScore || 0,
-                endDateBadge: exp.endDateBadge || "Black",
-                endDateBadgeScore: exp.endDateBadgeScore || 0,
-                jobFunctionsBadge: exp.jobFunctionsBadge || "Black",
-                jobFunctionsBadgeScore: exp.jobFunctionsBadgeScore || 0,
-                industryBadge: exp.industryBadge || "Black",
-                industryBadgeScore: exp.industryBadgeScore || 0,
-                websiteBadge: exp.websiteBadge || "Black",
-                websiteBadgeScore: exp.websiteBadgeScore || 0,
-                experienceFileBadge: exp.experienceFileBadge || "Black",
-                experienceFileBadgeScore: exp.experienceFileBadgeScore || 0
-              }))
-            : [{ ...newExperienceTemplate, id: Date.now().toString() }],
-        };
+        if (response.data.success) {
+          const profile = response.data.data;
+          setProfileId(profile._id);
+          setEditMode(false);
+          
+          // Create fieldVisibilities object from profile data
+          const fieldVisibilities = {};
+          
+          // Personal fields visibility - NEW APPROACH
+          if (profile.nameVisibility) fieldVisibilities['name'] = profile.nameVisibility;
+          if (profile.mobileVisibility) fieldVisibilities['mobile'] = profile.mobileVisibility;
+          if (profile.emailVisibility) fieldVisibilities['email'] = profile.emailVisibility;
+          if (profile.cnicVisibility) fieldVisibilities['cnic'] = profile.cnicVisibility;
+          if (profile.fatherNameVisibility) fieldVisibilities['fatherName'] = profile.fatherNameVisibility;
+          if (profile.cityVisibility) fieldVisibilities['city'] = profile.cityVisibility;
+          if (profile.countryVisibility) fieldVisibilities['country'] = profile.countryVisibility;
+          if (profile.genderVisibility) fieldVisibilities['gender'] = profile.genderVisibility;
+          if (profile.dobVisibility) fieldVisibilities['dob'] = profile.dobVisibility;
+          if (profile.nationalityVisibility) fieldVisibilities['nationality'] = profile.nationalityVisibility;
+          if (profile.residentStatusVisibility) fieldVisibilities['residentStatus'] = profile.residentStatusVisibility;
+          if (profile.maritalStatusVisibility) fieldVisibilities['maritalStatus'] = profile.maritalStatusVisibility;
+          if (profile.shiftPreferencesVisibility) fieldVisibilities['shiftPreferences'] = profile.shiftPreferencesVisibility;
+          if (profile.workAuthorizationVisibility) fieldVisibilities['workAuthorization'] = profile.workAuthorizationVisibility;
+          
+          // Files visibility
+          if (profile.resumeVisibility) fieldVisibilities['resume'] = profile.resumeVisibility;
+          if (profile.profilePictureVisibility) fieldVisibilities['profilePicture'] = profile.profilePictureVisibility;
+          
+          // Education visibility
+          profile.education?.forEach((edu, eduIndex) => {
+            if (edu.degreeTitleVisibility) fieldVisibilities[`education-${eduIndex}-degreeTitle`] = edu.degreeTitleVisibility;
+            if (edu.instituteVisibility) fieldVisibilities[`education-${eduIndex}-institute`] = edu.instituteVisibility;
+            if (edu.startDateVisibility) fieldVisibilities[`education-${eduIndex}-startDate`] = edu.startDateVisibility;
+            if (edu.endDateVisibility) fieldVisibilities[`education-${eduIndex}-endDate`] = edu.endDateVisibility;
+            if (edu.websiteVisibility) fieldVisibilities[`education-${eduIndex}-website`] = edu.websiteVisibility;
+            if (edu.degreeFileVisibility) fieldVisibilities[`education-${eduIndex}-degreeFile`] = edu.degreeFileVisibility;
+          });
+          
+          // Experience visibility
+          profile.experience?.forEach((exp, expIndex) => {
+            if (exp.jobTitleVisibility) fieldVisibilities[`experience-${expIndex}-jobTitle`] = exp.jobTitleVisibility;
+            if (exp.companyVisibility) fieldVisibilities[`experience-${expIndex}-company`] = exp.companyVisibility;
+            if (exp.startDateVisibility) fieldVisibilities[`experience-${expIndex}-startDate`] = exp.startDateVisibility;
+            if (exp.endDateVisibility) fieldVisibilities[`experience-${expIndex}-endDate`] = exp.endDateVisibility;
+            if (exp.websiteVisibility) fieldVisibilities[`experience-${expIndex}-website`] = exp.websiteVisibility;
+            if (exp.experienceFileVisibility) fieldVisibilities[`experience-${expIndex}-experienceFile`] = exp.experienceFileVisibility;
+            if (exp.jobFunctionsVisibility) fieldVisibilities[`experience-${expIndex}-jobFunctions`] = exp.jobFunctionsVisibility;
+            if (exp.industryVisibility) fieldVisibilities[`experience-${expIndex}-industry`] = exp.industryVisibility;
+          });
 
-        setFormData(transformedData);
-        
-        // Handle files
-        if (profile.resume) {
-          setFiles(prev => ({ ...prev, resume: { name: "resume.pdf", url: profile.resume } }));
+          const transformedData = {
+            personal: {
+              name: profile.name || "",
+              mobile: profile.mobile || "",
+              email: profile.email || userEmail,
+              cnic: profile.cnic || "",
+              fatherName: profile.fatherName || "",
+              city: profile.city || "",
+              country: profile.country || "",
+              gender: profile.gender || "",
+              dob: profile.dob ? new Date(profile.dob) : null,
+              nationality: profile.nationality || "",
+              residentStatus: profile.residentStatus || "",
+              maritalStatus: profile.maritalStatus || "",
+              shiftPreferences: profile.shiftPreferences || [],
+              workLocationPreference: profile.workLocationPreference || "",
+              workAuthorization: profile.workAuthorization || [],
+            },
+            fieldVisibilities: fieldVisibilities,
+            education: profile.education?.length > 0 
+              ? profile.education.map(edu => ({
+                  id: edu._id || Date.now().toString(),
+                  degreeTitle: edu.degreeTitle || "",
+                  institute: edu.institute || "",
+                  startDate: edu.startDate ? new Date(edu.startDate) : null,
+                  endDate: edu.endDate ? new Date(edu.endDate) : null,
+                  website: edu.website || "",
+                  degreeFile: edu.degreeFile ? { name: "degree_file", url: edu.degreeFile } : null,
+                  degreeTitleVisibility: edu.degreeTitleVisibility || "Public",
+                  instituteVisibility: edu.instituteVisibility || "Public",
+                  startDateVisibility: edu.startDateVisibility || "Public",
+                  endDateVisibility: edu.endDateVisibility || "Public",
+                  websiteVisibility: edu.websiteVisibility || "Public",
+                  degreeFileVisibility: edu.degreeFileVisibility || "Public"
+                }))
+              : [{ ...newEducationTemplate, id: Date.now().toString() }],
+            experience: profile.experience?.length > 0 
+              ? profile.experience.map(exp => ({
+                  id: exp._id || Date.now().toString(),
+                  jobTitle: exp.jobTitle || "",
+                  company: exp.company || "",
+                  startDate: exp.startDate ? new Date(exp.startDate) : null,
+                  endDate: exp.endDate ? new Date(exp.endDate) : null,
+                  website: exp.website || "",
+                  experienceFile: exp.experienceFile ? { name: "experience_file", url: exp.experienceFile } : null,
+                  jobFunctions: exp.jobFunctions || [],
+                  industry: exp.industry || "",
+                  jobTitleVisibility: exp.jobTitleVisibility || "Public",
+                  companyVisibility: exp.companyVisibility || "Public",
+                  startDateVisibility: exp.startDateVisibility || "Public",
+                  endDateVisibility: exp.endDateVisibility || "Public",
+                  websiteVisibility: exp.websiteVisibility || "Public",
+                  experienceFileVisibility: exp.experienceFileVisibility || "Public",
+                  jobFunctionsVisibility: exp.jobFunctionsVisibility || "Public",
+                  industryVisibility: exp.industryVisibility || "Public"
+                }))
+              : [{ ...newExperienceTemplate, id: Date.now().toString() }],
+          };
+
+          setFormData(transformedData);
+          
+          // Handle files
+          if (profile.resume) {
+            setFiles(prev => ({ ...prev, resume: { name: "resume.pdf", url: profile.resume } }));
+          }
+          if (profile.profilePicture) {
+            setFiles(prev => ({ ...prev, profilePicture: { name: "profile.jpg", url: profile.profilePicture } }));
+          }
         }
-        if (profile.profilePicture) {
-          setFiles(prev => ({ ...prev, profilePicture: { name: "profile.jpg", url: profile.profilePicture } }));
-        }
+      } catch (error) {
+        console.log('No existing profile found - starting fresh');
+        setEditMode(true);
+      } finally {
+        setIsLoading(false);
       }
-    } catch (error) {
-      console.log('No existing profile found - starting fresh');
-      setEditMode(true);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    };
 
-  checkExistingProfile();
-}, []);
+    checkExistingProfile();
+  }, []);
 
   const handleFileDrop = (field) => (acceptedFiles) => {
     if (acceptedFiles && acceptedFiles.length > 0 && editMode) {
@@ -663,27 +701,33 @@ useEffect(() => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsSubmitting(true);
 
     try {
-      // Validate required files
-      if (!files.profilePicture || !files.resume) {
-        toast.error('Please upload both profile picture and resume');
-        return;
-      }
-
-      // Validate education files
-      for (const edu of formData.education) {
-        if (!edu.degreeFile && !profileId) {
-          toast.error(`Please upload degree file for education: ${edu.degreeTitle}`);
+      // Validate required files for new profiles
+      if (!profileId) {
+        if (!files.profilePicture || !files.resume) {
+          toast.error('Please upload both profile picture and resume');
+          setIsSubmitting(false);
           return;
         }
-      }
 
-      // Validate experience files
-      for (const exp of formData.experience) {
-        if (!exp.experienceFile && !profileId) {
-          toast.error(`Please upload experience file for: ${exp.jobTitle} at ${exp.company}`);
-          return;
+        // Validate education files
+        for (const edu of formData.education) {
+          if (!edu.degreeFile) {
+            toast.error(`Please upload degree file for education: ${edu.degreeTitle}`);
+            setIsSubmitting(false);
+            return;
+          }
+        }
+
+        // Validate experience files
+        for (const exp of formData.experience) {
+          if (!exp.experienceFile) {
+            toast.error(`Please upload experience file for: ${exp.jobTitle} at ${exp.company}`);
+            setIsSubmitting(false);
+            return;
+          }
         }
       }
 
@@ -695,9 +739,9 @@ useEffect(() => {
         formDataToSend.append("profileId", profileId);
       }
 
-      // Add personal info including arrays
+      // Add personal info with visibility
       Object.entries(formData.personal).forEach(([field, value]) => {
-        if (value !== null && value !== undefined) {
+        if (value !== null && value !== undefined && value !== '') {
           if (field === 'dob' && value) {
             formDataToSend.append(field, value.toISOString());
           } else if (Array.isArray(value)) {
@@ -707,52 +751,111 @@ useEffect(() => {
           } else {
             formDataToSend.append(field, value);
           }
+          
+          // Add visibility for each field (except CNIC which should always be private)
+          if (field !== 'cnic') {
+            const visibility = formData.fieldVisibilities[field] || 'Public';
+            formDataToSend.append(`${field}Visibility`, visibility);
+          } else {
+            // CNIC should always be private
+            formDataToSend.append(`${field}Visibility`, 'Private');
+          }
         }
       });
 
-      // Add files
+      // Add files with visibility
       if (files.profilePicture instanceof File) {
         formDataToSend.append('profilePicture', files.profilePicture);
+        const visibility = formData.fieldVisibilities['profilePicture'] || 'Public';
+        formDataToSend.append('profilePictureVisibility', visibility);
+      } else if (files.profilePicture?.url) {
+        formDataToSend.append('profilePicture', files.profilePicture.url);
+        const visibility = formData.fieldVisibilities['profilePicture'] || 'Public';
+        formDataToSend.append('profilePictureVisibility', visibility);
       }
+      
       if (files.resume instanceof File) {
         formDataToSend.append('resume', files.resume);
+        const visibility = formData.fieldVisibilities['resume'] || 'Public';
+        formDataToSend.append('resumeVisibility', visibility);
+      } else if (files.resume?.url) {
+        formDataToSend.append('resume', files.resume.url);
+        const visibility = formData.fieldVisibilities['resume'] || 'Public';
+        formDataToSend.append('resumeVisibility', visibility);
       }
 
-      // Add education entries
+      // Add education with proper visibility for each field
       formData.education.forEach((edu, index) => {
-        formDataToSend.append(`education[${index}][degreeTitle]`, edu.degreeTitle);
-        formDataToSend.append(`education[${index}][institute]`, edu.institute);
-        formDataToSend.append(`education[${index}][startDate]`, edu.startDate?.toISOString());
-        formDataToSend.append(`education[${index}][endDate]`, edu.endDate?.toISOString());
+        // Add basic education fields
+        formDataToSend.append(`education[${index}][degreeTitle]`, edu.degreeTitle || '');
+        formDataToSend.append(`education[${index}][institute]`, edu.institute || '');
         formDataToSend.append(`education[${index}][website]`, edu.website || '');
+        
+        // Add dates
+        if (edu.startDate) {
+          formDataToSend.append(`education[${index}][startDate]`, edu.startDate.toISOString());
+        }
+        if (edu.endDate) {
+          formDataToSend.append(`education[${index}][endDate]`, edu.endDate.toISOString());
+        }
+        
+        // Add degree file
         if (edu.degreeFile instanceof File) {
           formDataToSend.append(`education[${index}][degreeFile]`, edu.degreeFile);
+        } else if (edu.degreeFile?.url) {
+          formDataToSend.append(`education[${index}][degreeFile]`, edu.degreeFile.url);
         }
+        
+        // Add visibility for each education field
+        const eduFields = ['degreeTitle', 'institute', 'website', 'startDate', 'endDate', 'degreeFile'];
+        eduFields.forEach(field => {
+          const visibilityKey = `education-${index}-${field}`;
+          const visibility = formData.fieldVisibilities[visibilityKey] || 'Public';
+          formDataToSend.append(`education[${index}][${field}Visibility]`, visibility);
+        });
       });
 
-      // Add experience entries
+      // Add experience with proper visibility for each field
       formData.experience.forEach((exp, index) => {
-        formDataToSend.append(`experience[${index}][jobTitle]`, exp.jobTitle);
-        formDataToSend.append(`experience[${index}][company]`, exp.company);
-        formDataToSend.append(`experience[${index}][startDate]`, exp.startDate?.toISOString());
-        formDataToSend.append(`experience[${index}][endDate]`, exp.endDate?.toISOString());
+        // Add basic experience fields
+        formDataToSend.append(`experience[${index}][jobTitle]`, exp.jobTitle || '');
+        formDataToSend.append(`experience[${index}][company]`, exp.company || '');
         formDataToSend.append(`experience[${index}][website]`, exp.website || '');
-        formDataToSend.append(`experience[${index}][industry]`, exp.industry);
+        formDataToSend.append(`experience[${index}][industry]`, exp.industry || '');
         
-        // Job functions
-        if (exp.jobFunctions && exp.jobFunctions.length > 0) {
+        // Add dates
+        if (exp.startDate) {
+          formDataToSend.append(`experience[${index}][startDate]`, exp.startDate.toISOString());
+        }
+        if (exp.endDate) {
+          formDataToSend.append(`experience[${index}][endDate]`, exp.endDate.toISOString());
+        }
+        
+        // Add experience file
+        if (exp.experienceFile instanceof File) {
+          formDataToSend.append(`experience[${index}][experienceFile]`, exp.experienceFile);
+        } else if (exp.experienceFile?.url) {
+          formDataToSend.append(`experience[${index}][experienceFile]`, exp.experienceFile.url);
+        }
+        
+        // Add job functions array
+        if (exp.jobFunctions && Array.isArray(exp.jobFunctions)) {
           exp.jobFunctions.forEach((func, funcIndex) => {
             formDataToSend.append(`experience[${index}][jobFunctions][${funcIndex}]`, func);
           });
         }
-
-        if (exp.experienceFile instanceof File) {
-          formDataToSend.append(`experience[${index}][experienceFile]`, exp.experienceFile);
-        }
+        
+        // Add visibility for each experience field
+        const expFields = ['jobTitle', 'company', 'website', 'industry', 'startDate', 'endDate', 'experienceFile', 'jobFunctions'];
+        expFields.forEach(field => {
+          const visibilityKey = `experience-${index}-${field}`;
+          const visibility = formData.fieldVisibilities[visibilityKey] || 'Public';
+          formDataToSend.append(`experience[${index}][${field}Visibility]`, visibility);
+        });
       });
 
       // Submit the form
-      const endpoint = profileId ? `/profile/${profileId}` : '/profile';
+      const endpoint = '/profile';
       const method = profileId ? 'put' : 'post';
 
       const response = await axiosinstance[method](endpoint, formDataToSend, {
@@ -765,10 +868,10 @@ useEffect(() => {
         toast.success(profileId ? 'Profile updated successfully!' : 'Profile submitted successfully!');
         
         if (profileId) {
-          // If updating, stay in the form but disable edit mode
           setEditMode(false);
+          // Optionally refresh the data
+          window.location.reload();
         } else {
-          // If new submission, set the profile ID and show success
           setProfileId(response.data.data._id);
           setSubmitted(true);
         }
@@ -782,6 +885,8 @@ useEffect(() => {
                       error.message || 
                       'Failed to submit profile';
       toast.error(errorMsg);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -798,7 +903,7 @@ useEffect(() => {
   }
 
   if (submitted) {
-    return <SuccessMessage />;
+    return navigate('/success');
   }
 
   return (
@@ -840,17 +945,53 @@ useEffect(() => {
 
       <div className="max-w-6xl mx-auto px-3 py-4">
         <form className="space-y-6" onSubmit={handleSubmit}>
-          {/* Personal Information Section */}
-          <Section
-            icon={
-              <div className="bg-gradient-to-r from-gray-100 to-indigo-100 p-1.5 rounded-lg">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-[#f4793d]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
+       
+          <Section>
+            <div>
+              <div className="flex items-center justify-between mr-2 border-b border-[#f4793d]">
+                <div className=" flex gap-2">
+                  <div className="bg-gradient-to-r from-gray-100 to-indigo-100 p-1.5 rounded-lg" >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-[#f4793d]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-slate-900">Personal Information</h2>
+                  </div>
+                </div>
+
+                {/* Single-line visibility control */}
+                {editMode && (
+                  <div className="mb-4 flex items-center gap-2 p-3  rounded-lg ">
+                    <span className="text-xs font-medium text-gray-700 whitespace-nowrap"> Visibility:</span>
+                    <select
+                      value={selectedPreset}
+                      onChange={(e) => setSelectedPreset(e.target.value)}
+                      className="flex-1 max-w-[120px] px-2 py-1 text-sm border border-gray-300 rounded-md focus:ring-1 focus:ring-[#f4793d] focus:border-[#f4793d]"
+                    >
+                      <option value="">Select</option>
+                      {VISIBILITY_PRESETS.map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={handleApplyPreset}
+                      disabled={!selectedPreset}
+                      className={`px-3 py-1 text-xs font-medium rounded whitespace-nowrap ${
+                        !selectedPreset
+                          ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                          : 'bg-[#f4793d] text-white hover:bg-[#e66e33]'
+                      }`}
+                    >
+                      Apply
+                    </button>
+                  </div>
+                )}
               </div>
-            }
-            title="Personal Information"
-          >
+            </div>
             <div className="bg-white rounded-lg p-3 shadow border border-gray-100">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FieldWrapper 
@@ -1494,12 +1635,27 @@ useEffect(() => {
             <div className="flex justify-center pt-4">
               <button
                 type="submit"
-                className="px-6 py-2.5 bg-gradient-to-r from-[#f4793d] to-[#ff8748] text-white rounded hover:shadow transition-all text-sm font-semibold shadow flex items-center gap-1"
+                disabled={isSubmitting}
+                className={`px-6 py-2.5 bg-gradient-to-r from-[#f4793d] to-[#ff8748] text-white rounded hover:shadow transition-all text-sm font-semibold shadow flex items-center justify-center gap-1 ${
+                  isSubmitting ? 'opacity-75 cursor-not-allowed' : ''
+                }`}
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-                {profileId ? 'Update Profile' : 'Submit Profile'}
+                {isSubmitting ? (
+                  <>
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    {profileId ? 'Updating...' : 'Submitting...'}
+                  </>
+                ) : (
+                  <>
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    {profileId ? 'Update Profile' : 'Submit Profile'}
+                  </>
+                )}
               </button>
             </div>
           )}

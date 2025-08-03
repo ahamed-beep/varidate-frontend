@@ -3,7 +3,7 @@ import { Routes, Route } from "react-router-dom";
 import Form from "./components/Form";
 import Newaccount from "./components/Newaccount";
 import { ToastContainer } from "react-toastify";
-import 'react-toastify/dist/ReactToastify.css'; // ✅ Don't forget this
+import 'react-toastify/dist/ReactToastify.css'; 
 
 import VerifyEmailCode from "./components/Verifyemail";
 import Userdashboard from "./components/UserDashboard";
@@ -11,6 +11,7 @@ import ProtectedRoute from "./Protection/Protectroute";
 import ForgotPassword from "./components/ForgetPassword";
 import SuccessMessage from "./components/SubmissionSuccess";
 import ProfileValidatorApp from "./components/Userprofiledetail";
+import PromptForm from "./prompt/DeepFrom";
 
 
 
@@ -35,9 +36,11 @@ function App() {
         <Route path="/create" element={<Newaccount />} />
 
         
-        <Route path="/success" element={<SuccessMessage />} />
+   
 <Route path="/profile/:id" element={<ProfileValidatorApp/>} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/prompt" element={<PromptForm />} />
+
 
 
        <Route
@@ -48,7 +51,14 @@ function App() {
             </ProtectedRoute>
           }
         />
-
+ <Route
+          path="/success"
+          element={
+            <ProtectedRoute>
+              <SuccessMessage />
+            </ProtectedRoute>
+          }
+        />
 
     
         
