@@ -1,7 +1,7 @@
 'use client';
 import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchProfileById, updateBadgeScores } from '../Redux/profile';
+import { fetchProfileById, updateBadgeScores, checkCanValidate, clearValidationErrors } from '../Redux/profile';
 
 const BadgeIcon = ({ badgeLevel = 'Black' }) => {
   const badgeImages = {
@@ -90,32 +90,76 @@ const DocumentIcon = ({ className }) => (
   </svg>
 );
 
-const SubmissionModal = ({ onClose }) => (
+const SubmissionModal = ({ onClose, message, commonCompanies }) => (
   <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50">
-    <div className="bg-white rounded-lg p-6 max-w-sm w-full text-center">
+    <div className="bg-white rounded-lg p-6 max-w-md w-full text-center">
       <div className="mx-auto flex items-center justify-center h-10 w-10 rounded-full bg-green-100">
         <svg className="h-5 w-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
         </svg>
       </div>
       <h3 className="text-lg font-semibold text-gray-900 mt-3">Validation Submitted</h3>
-      <p className="text-sm text-gray-600 mt-2">Thank you for your feedback.</p>
-      <button onClick={onClose} className="mt-4 w-full bg-orange-600 text-white px-4 py-2 rounded-md hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500">Close</button>
+      <p className="text-sm text-gray-600 mt-2">{message || 'Thank you for your feedback.'}</p>
+      {commonCompanies && commonCompanies.length > 0 && (
+        <div className="mt-3 p-2 bg-blue-50 rounded">
+          <p className="text-xs text-blue-700">
+            Validated based on shared experience at: <strong>{commonCompanies.join(', ')}</strong>
+          </p>
+        </div>
+      )}
+      <button 
+        onClick={onClose} 
+        className="mt-4 w-full bg-orange-600 text-white px-4 py-2 rounded-md hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500"
+      >
+        Close
+      </button>
+    </div>
+  </div>
+);
+
+const ValidationNotAllowedModal = ({ onClose, error }) => (
+  <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50">
+    <div className="bg-white rounded-lg p-6 max-w-md w-full text-center">
+      <div className="mx-auto flex items-center justify-center h-10 w-10 rounded-full bg-red-100">
+        <svg className="h-5 w-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </div>
+      <h3 className="text-lg font-semibold text-gray-900 mt-3">Validation Not Allowed</h3>
+      <p className="text-sm text-gray-600 mt-2">{error}</p>
+      <button 
+        onClick={onClose} 
+        className="mt-4 w-full bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
+      >
+        Go Back
+      </button>
     </div>
   </div>
 );
 
 const ProfileValidatorApp = ({ id, onBack }) => {
   const dispatch = useDispatch();
-  const { selectedProfile, loading, error, updatedProfile } = useSelector((state) => state.profile);
+  const { 
+    selectedProfile, 
+    loading, 
+    error, 
+    updatedProfile, 
+    canValidate, 
+    validationCheckLoading,
+    validationCheckError,
+    commonCompanies,
+    validationMessage,
+    successMessage
+  } = useSelector((state) => state.profile);
 
+  const [validationError, setValidationError] = useState(null);
   const [feedback, setFeedback] = useState({});
   const [originalFeedback, setOriginalFeedback] = useState({});
   const [showLetter, setShowLetter] = useState({});
   const [showDegree, setShowDegree] = useState({});
   const [isEditing, setIsEditing] = useState(false);
   const [showSubmissionModal, setShowSubmissionModal] = useState(false);
-  const [submitError, setSubmitError] = useState(null);
+  const [showValidationBlockedModal, setShowValidationBlockedModal] = useState(false);
   const [hasVoted, setHasVoted] = useState(false);
 
   useEffect(() => {
@@ -123,6 +167,16 @@ const ProfileValidatorApp = ({ id, onBack }) => {
       dispatch(fetchProfileById(id));
     }
   }, [id, dispatch]);
+
+  // Check if user can validate this profile
+  useEffect(() => {
+    if (selectedProfile && id) {
+      const userId = localStorage.getItem('userId');
+      if (userId) {
+        dispatch(checkCanValidate({ profileId: id, userId }));
+      }
+    }
+  }, [selectedProfile, id, dispatch]);
 
   useEffect(() => {
     if (selectedProfile) {
@@ -140,6 +194,11 @@ const ProfileValidatorApp = ({ id, onBack }) => {
       }
     }
   }, [selectedProfile]);
+
+  // Clear validation errors when component mounts
+  useEffect(() => {
+    dispatch(clearValidationErrors());
+  }, [dispatch]);
 
   const getVotedFields = (profile, voterId) => {
     if (!profile || !voterId) return [];
@@ -206,65 +265,98 @@ const ProfileValidatorApp = ({ id, onBack }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setSubmitError(null);
+    setValidationError(null);
 
-    const voterId = localStorage.getItem('userId');
-    if (!voterId) {
-      setSubmitError("Voter ID not found. Please log in.");
+    // Check if validation is allowed
+    if (!canValidate) {
+      setShowValidationBlockedModal(true);
+      return;
+    }
+
+    // Check if there are any feedback changes
+    if (Object.keys(feedback).length === 0) {
+      setValidationError("Please provide at least one validation before submitting.");
       return;
     }
 
     try {
-      const votesPayload = { voterId };
-      
-      if (isEditing) {
-        const changedVotes = {};
-        Object.keys(feedback).forEach(key => {
-          if (originalFeedback[key] !== feedback[key]) {
-            changedVotes[key] = feedback[key];
-          }
-        });
-        
-        if (Object.keys(changedVotes).length === 0) {
-          setIsEditing(false);
-          return;
-        }
-        
-        Object.assign(votesPayload, changedVotes);
-      } else {
-        Object.assign(votesPayload, feedback);
-      }
-
       const resultAction = await dispatch(
         updateBadgeScores({
           id: selectedProfile._id,
-          votes: votesPayload
+          votes: { ...feedback, voterId: localStorage.getItem('userId') }
         })
       );
 
-      if (updateBadgeScores.fulfilled.match(resultAction)) {
-        setShowSubmissionModal(true);
-        setHasVoted(true);
-        setIsEditing(false);
-        setOriginalFeedback(feedback);
-      } else {
-        throw new Error(resultAction.payload?.error || resultAction.payload?.message || 'Failed to update badge scores');
+      if (updateBadgeScores.rejected.match(resultAction)) {
+        throw new Error(resultAction.payload?.message || "Validation failed");
       }
+
+      setShowSubmissionModal(true);
+      setHasVoted(true);
+      setIsEditing(false);
     } catch (error) {
-      console.error('Update error:', error);
-      setSubmitError(error.message);
+      setValidationError(error.message);
     }
   };
 
   const handleEdit = () => {
     setIsEditing(true);
+    dispatch(clearValidationErrors());
   };
 
   const toggleFile = (setter, index) => setter((prev) => ({ ...prev, [index]: !prev[index] }));
 
-  if (loading) return <div className="flex justify-center items-center min-h-screen text-gray-600 font-semibold text-lg">Loading profile...</div>;
-  if (error) return <div className="flex justify-center items-center min-h-screen text-red-600">Error: {error}</div>;
-  if (!selectedProfile) return <div className="flex justify-center items-center min-h-screen text-gray-600">Profile not found.</div>;
+  if (loading || validationCheckLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen text-gray-600 font-semibold text-lg">
+        Loading profile...
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex justify-center items-center min-h-screen text-red-600">
+        Error: {error}
+      </div>
+    );
+  }
+
+  if (!selectedProfile) {
+    return (
+      <div className="flex justify-center items-center min-h-screen text-gray-600">
+        Profile not found.
+      </div>
+    );
+  }
+
+  // Show validation blocked modal if needed
+  if (validationCheckError && !canValidate) {
+    return (
+      <>
+        <ValidationNotAllowedModal 
+          onClose={onBack}
+          error={validationCheckError?.message || validationMessage || "You cannot validate this profile."}
+        />
+        <div className="bg-orange-50 min-h-screen p-4 sm:p-6 lg:p-8">
+          <div className="flex justify-center items-center min-h-screen">
+            <div className="text-center">
+              <h2 className="text-xl font-semibold text-gray-800 mb-4">Validation Not Allowed</h2>
+              <p className="text-gray-600 mb-4">
+                {validationCheckError?.message || "You can only validate profiles from colleagues who worked at the same companies as you."}
+              </p>
+              <button 
+                onClick={onBack}
+                className="bg-orange-600 text-white px-6 py-2 rounded-md hover:bg-orange-700"
+              >
+                Go Back
+              </button>
+            </div>
+          </div>
+        </div>
+      </>
+    );
+  }
 
   const currentProfile = updatedProfile || selectedProfile;
 
@@ -413,8 +505,21 @@ const ProfileValidatorApp = ({ id, onBack }) => {
 
   return (
     <>
-      {showSubmissionModal && <SubmissionModal onClose={() => setShowSubmissionModal(false)} />}
-      <main className=" min-h-screen p-4 sm:p-6 lg:p-8">
+      {showSubmissionModal && (
+        <SubmissionModal 
+          onClose={() => setShowSubmissionModal(false)} 
+          message={successMessage}
+          commonCompanies={commonCompanies}
+        />
+      )}
+      {showValidationBlockedModal && (
+        <ValidationNotAllowedModal 
+          onClose={() => setShowValidationBlockedModal(false)}
+          error={validationError}
+        />
+      )}
+      
+      <main className="bg-orange-50 min-h-screen p-4 sm:p-6 lg:p-8">
         <div className="mb-4">
           <button 
             onClick={onBack}
@@ -426,6 +531,20 @@ const ProfileValidatorApp = ({ id, onBack }) => {
             Back to Directory
           </button>
         </div>
+
+        {/* Company Validation Status */}
+        {commonCompanies && commonCompanies.length > 0 && (
+          <div className="mb-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded max-w-4xl mx-auto">
+            <div className="flex items-center">
+              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span className="font-medium">
+                Validation allowed - Shared companies: <strong>{commonCompanies.join(', ')}</strong>
+              </span>
+            </div>
+          </div>
+        )}
         
         <form onSubmit={handleSubmit} className="bg-white rounded-lg max-w-4xl mx-auto p-6">
           <div className="flex items-center gap-4 mb-6">
@@ -454,9 +573,9 @@ const ProfileValidatorApp = ({ id, onBack }) => {
             </div>
           </div>
 
-          {submitError && (
+          {validationError && (
             <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
-              {submitError}
+              {validationError}
             </div>
           )}
 
@@ -580,7 +699,7 @@ const ProfileValidatorApp = ({ id, onBack }) => {
                       visibility={getNestedVisibility('experience', i, 'endDate')}
                     />
 
-                    {exp.experienceFile && (
+                    {exp.experienceFile && getNestedVisibility('experience', i, 'experienceFile') === 'Public' && (
                       <div className="mt-3">
                         <button
                           type="button"
@@ -603,6 +722,18 @@ const ProfileValidatorApp = ({ id, onBack }) => {
                             )}
                           </div>
                         )}
+                        <div className="mt-2">
+                          <InfoField
+                            label="Experience Document"
+                            value="Uploaded"
+                            name={`exp-experienceFile-${i}`}
+                            feedback={feedback}
+                            onFeedbackChange={handleFeedbackChange}
+                            isLocked={hasVoted && !isEditing}
+                            badgeLevel={getNestedBadge('experience', i, 'experienceFile')}
+                            visibility={getNestedVisibility('experience', i, 'experienceFile')}
+                          />
+                        </div>
                       </div>
                     )}
                   </div>
@@ -654,7 +785,7 @@ const ProfileValidatorApp = ({ id, onBack }) => {
                       visibility={getNestedVisibility('education', i, 'endDate')}
                     />
 
-                    {edu.degreeFile && (
+                    {edu.degreeFile && getNestedVisibility('education', i, 'degreeFile') === 'Public' && (
                       <div className="mt-3">
                         <button
                           type="button"
@@ -677,6 +808,18 @@ const ProfileValidatorApp = ({ id, onBack }) => {
                             )}
                           </div>
                         )}
+                        <div className="mt-2">
+                          <InfoField
+                            label="Degree Certificate"
+                            value="Uploaded"
+                            name={`edu-degreeFile-${i}`}
+                            feedback={feedback}
+                            onFeedbackChange={handleFeedbackChange}
+                            isLocked={hasVoted && !isEditing}
+                            badgeLevel={getNestedBadge('education', i, 'degreeFile')}
+                            visibility={getNestedVisibility('education', i, 'degreeFile')}
+                          />
+                        </div>
                       </div>
                     )}
                   </div>
@@ -698,12 +841,27 @@ const ProfileValidatorApp = ({ id, onBack }) => {
             
             <button
               type="submit"
-              disabled={(!isEditing && hasVoted) || Object.keys(feedback).length === 0}
+              disabled={(!isEditing && hasVoted) || Object.keys(feedback).length === 0 || !canValidate}
               className="bg-orange-600 text-white px-6 py-2 rounded-md hover:bg-orange-700 transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
-              {hasVoted ? (isEditing ? 'Save Changes' : 'Validation Submitted') : 'Submit Validation'}
+              {!canValidate ? 'Validation Not Allowed' : 
+               hasVoted ? (isEditing ? 'Save Changes' : 'Validation Submitted') : 'Submit Validation'}
             </button>
           </div>
+
+          {/* Show validation requirements */}
+          {!canValidate && (
+            <div className="mt-4 p-3 bg-yellow-100 border border-yellow-400 text-yellow-700 rounded">
+              <div className="flex items-center">
+                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.084 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+                <span className="font-medium">
+                  You can only validate profiles from colleagues who worked at the same companies as you.
+                </span>
+              </div>
+            </div>
+          )}
         </form>
       </main>
     </>

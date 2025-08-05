@@ -731,6 +731,11 @@ const UserForm = () => {
         }
       }
 
+        const companyNames = formData.experience.map(exp => exp.company).filter(Boolean);
+    if (companyNames.length > 0) {
+      localStorage.setItem('userCompanies', JSON.stringify(companyNames));
+    }
+
       const formDataToSend = new FormData();
       const userId = localStorage.getItem("userId");
       formDataToSend.append("userId", userId);

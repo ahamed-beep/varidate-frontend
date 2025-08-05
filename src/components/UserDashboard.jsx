@@ -32,11 +32,11 @@ function Userdashboard() {
   const dispatch = useDispatch();
   const { picture } = useSelector((state) => state.profile);
   
-  useEffect(() => {
-    if (userId) {
-      dispatch(fetchProfilePicture(userId));
-    }
-  }, [dispatch, userId]);
+useEffect(() => {
+  if (userId) {
+    dispatch(fetchProfilePicture(userId));
+  }
+}, [dispatch, userId]);
 
   const navigate = useNavigate();
 
@@ -121,27 +121,34 @@ function Userdashboard() {
             <button className="relative">
               <Bell size={20} className="text-white" />
             </button>
-            <div className="flex items-center space-x-3">
-              {picture?.url ? (
-                <img
-                  src={picture.url}
-                  alt="Profile"
-                  className="w-10 h-10 rounded-full bg-white object-cover"
-                  onError={(e) => {
-                    e.target.onerror = null;
-                    e.target.src = '/Images/profile.png';
-                  }}
-                />
-              ) : (
-                <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center">
-                  <span className="text-gray-500 text-xs">Loading...</span>
-                </div>
-              )}
-              <div className="text-right text-white hidden sm:block">
-                <div className="font-medium text-sm">{userName}</div>
-                <div className="text-xs text-blue-100">{userEmail}</div>
-              </div>
-            </div>
+           <div className="flex items-center space-x-3">
+  {picture ? (
+    picture.url ? (
+      <img
+        src={picture.url}
+        alt="Profile"
+        className="w-10 h-10 rounded-full bg-white object-cover"
+        onError={(e) => {
+          e.target.onerror = null;
+          e.target.src = '/Images/profile.png';
+        }}
+      />
+    ) : (
+      <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center">
+        <span className="text-gray-500 text-xs">No Image</span>
+      </div>
+    )
+  
+  ) : (
+    <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center">
+      <span className="text-gray-500 text-xs">Error</span>
+    </div>
+  )}
+  <div className="text-right text-white hidden sm:block">
+    <div className="font-medium text-sm">{userName}</div>
+    <div className="text-xs text-blue-100">{userEmail}</div>
+  </div>
+</div>
           </div>
         </header>
 
