@@ -1,7 +1,8 @@
+// ProfileValidatorApp.js
 'use client';
 import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchProfileById, updateBadgeScores, checkCanValidate, clearValidationErrors } from '../Redux/profile';
+import { fetchProfileById, updateBadgeScores, checkCanValidate, clearValidationErrors, resetValidationState } from './Redux/profile';
 
 const BadgeIcon = ({ badgeLevel = 'Black' }) => {
   const badgeImages = {
@@ -49,8 +50,9 @@ const RadioGroup = ({ name, value, onChange, disabled }) => (
   </div>
 );
 
-const InfoField = ({ label, value, name, feedback, onFeedbackChange, isLocked, badgeLevel, visibility }) => {
+const InfoField = ({ label, value, name, feedback, onFeedbackChange, isLocked, badgeLevel, visibility, canValidate, isEditing }) => {
   const shouldShowField = visibility === 'Public';
+  const isDisabled = !isEditing || !canValidate;
   
   return (
     <div className="py-3">
@@ -71,7 +73,7 @@ const InfoField = ({ label, value, name, feedback, onFeedbackChange, isLocked, b
                   name={name}
                   value={feedback[name]}
                   onChange={(e) => onFeedbackChange(name, e.target.value)}
-                  disabled={isLocked}
+                  disabled={isDisabled}
                 />
               )}
             </>
@@ -84,11 +86,53 @@ const InfoField = ({ label, value, name, feedback, onFeedbackChange, isLocked, b
   );
 };
 
-const DocumentIcon = ({ className }) => (
-  <svg className={className} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
-  </svg>
-);
+const DocumentViewer = ({ fileUrl, onClose }) => {
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-50 p-4">
+      <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] flex flex-col">
+        <div className="flex justify-between items-center p-4 border-b">
+          <h3 className="text-lg font-semibold">
+            {fileUrl.endsWith('.pdf') ? 'PDF Document' : 'Image Document'}
+          </h3>
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <div className="flex-1 overflow-auto p-4">
+          {fileUrl.endsWith('.pdf') ? (
+            <iframe
+              src={fileUrl}
+              className="w-full h-full min-h-[70vh] border rounded"
+              title="Document Viewer"
+              frameBorder="0"
+            />
+          ) : (
+            <div className="flex justify-center">
+              <img 
+                src={fileUrl} 
+                alt="Document" 
+                className="max-w-full max-h-[70vh] object-contain rounded border"
+              />
+            </div>
+          )}
+        </div>
+        <div className="p-4 border-t flex justify-end">
+          <a
+            href={fileUrl}
+            download
+            target="_blank"
+            rel="noopener noreferrer"
+            className="bg-orange-600 text-white px-4 py-2 rounded-md hover:bg-orange-700"
+          >
+            Download Document
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const SubmissionModal = ({ onClose, message, commonCompanies }) => (
   <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50">
@@ -128,7 +172,7 @@ const ValidationNotAllowedModal = ({ onClose, error }) => (
       <h3 className="text-lg font-semibold text-gray-900 mt-3">Validation Not Allowed</h3>
       <p className="text-sm text-gray-600 mt-2">{error}</p>
       <button 
-        onClick={onClose} 
+        onClick={onBack}
         className="mt-4 w-full bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
       >
         Go Back
@@ -148,27 +192,29 @@ const ProfileValidatorApp = ({ id, onBack }) => {
     validationCheckLoading,
     validationCheckError,
     commonCompanies,
-    validationMessage,
-    successMessage
+    validationMessage
   } = useSelector((state) => state.profile);
 
   const [validationError, setValidationError] = useState(null);
   const [feedback, setFeedback] = useState({});
-  const [originalFeedback, setOriginalFeedback] = useState({});
+  const [initialFeedback, setInitialFeedback] = useState({});
   const [showLetter, setShowLetter] = useState({});
   const [showDegree, setShowDegree] = useState({});
   const [isEditing, setIsEditing] = useState(false);
   const [showSubmissionModal, setShowSubmissionModal] = useState(false);
   const [showValidationBlockedModal, setShowValidationBlockedModal] = useState(false);
   const [hasVoted, setHasVoted] = useState(false);
+  const [validatedFields, setValidatedFields] = useState([]);
 
   useEffect(() => {
     if (id) {
       dispatch(fetchProfileById(id));
     }
+    return () => {
+      dispatch(resetValidationState());
+    };
   }, [id, dispatch]);
 
-  // Check if user can validate this profile
   useEffect(() => {
     if (selectedProfile && id) {
       const userId = localStorage.getItem('userId');
@@ -188,17 +234,13 @@ const ProfileValidatorApp = ({ id, onBack }) => {
         const initialFeedback = {};
         votedFields.forEach(field => {
           initialFeedback[field.path] = field.voteValue;
+          setValidatedFields(prev => [...prev, field.path]);
         });
         setFeedback(initialFeedback);
-        setOriginalFeedback(initialFeedback);
+        setInitialFeedback(initialFeedback);
       }
     }
   }, [selectedProfile]);
-
-  // Clear validation errors when component mounts
-  useEffect(() => {
-    dispatch(clearValidationErrors());
-  }, [dispatch]);
 
   const getVotedFields = (profile, voterId) => {
     if (!profile || !voterId) return [];
@@ -259,21 +301,32 @@ const ProfileValidatorApp = ({ id, onBack }) => {
   };
 
   const handleFeedbackChange = (key, value) => {
-    if (hasVoted && !isEditing) return;
+    if (!isEditing || !canValidate) return;
     setFeedback((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const hasNewValidations = () => {
+    const newKeys = Object.keys(feedback).filter(key => !(key in initialFeedback));
+    if (newKeys.length > 0) return true;
+    
+    for (const key in feedback) {
+      if (initialFeedback[key] && feedback[key] !== initialFeedback[key]) {
+        return true;
+      }
+    }
+    
+    return false;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setValidationError(null);
 
-    // Check if validation is allowed
     if (!canValidate) {
       setShowValidationBlockedModal(true);
       return;
     }
 
-    // Check if there are any feedback changes
     if (Object.keys(feedback).length === 0) {
       setValidationError("Please provide at least one validation before submitting.");
       return;
@@ -288,12 +341,15 @@ const ProfileValidatorApp = ({ id, onBack }) => {
       );
 
       if (updateBadgeScores.rejected.match(resultAction)) {
-        throw new Error(resultAction.payload?.message || "Validation failed");
+        throw new Error(resultAction.payload || "Validation failed");
       }
 
       setShowSubmissionModal(true);
       setHasVoted(true);
       setIsEditing(false);
+      setInitialFeedback(feedback);
+      const newValidatedFields = Object.keys(feedback).filter(key => !validatedFields.includes(key));
+      setValidatedFields(prev => [...prev, ...newValidatedFields]);
     } catch (error) {
       setValidationError(error.message);
     }
@@ -302,6 +358,11 @@ const ProfileValidatorApp = ({ id, onBack }) => {
   const handleEdit = () => {
     setIsEditing(true);
     dispatch(clearValidationErrors());
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setFeedback(initialFeedback);
   };
 
   const toggleFile = (setter, index) => setter((prev) => ({ ...prev, [index]: !prev[index] }));
@@ -330,20 +391,19 @@ const ProfileValidatorApp = ({ id, onBack }) => {
     );
   }
 
-  // Show validation blocked modal if needed
   if (validationCheckError && !canValidate) {
     return (
       <>
         <ValidationNotAllowedModal 
           onClose={onBack}
-          error={validationCheckError?.message || validationMessage || "You cannot validate this profile."}
+          error={validationCheckError || validationMessage || "You cannot validate this profile."}
         />
         <div className="bg-orange-50 min-h-screen p-4 sm:p-6 lg:p-8">
           <div className="flex justify-center items-center min-h-screen">
             <div className="text-center">
               <h2 className="text-xl font-semibold text-gray-800 mb-4">Validation Not Allowed</h2>
               <p className="text-gray-600 mb-4">
-                {validationCheckError?.message || "You can only validate profiles from colleagues who worked at the same companies as you."}
+                {validationCheckError || "You can only validate profiles from colleagues who worked at the same companies as you."}
               </p>
               <button 
                 onClick={onBack}
@@ -370,7 +430,6 @@ const ProfileValidatorApp = ({ id, onBack }) => {
     return currentProfile[arrayName][index][`${fieldName}Visibility`] || 'Private';
   };
 
-  // Personal Info Fields
   const personalFields = [
     { 
       label: 'Name', 
@@ -423,7 +482,6 @@ const ProfileValidatorApp = ({ id, onBack }) => {
     },
   ];
 
-  // Contact Info Fields
   const contactFields = [
     { 
       label: 'Email', 
@@ -462,7 +520,6 @@ const ProfileValidatorApp = ({ id, onBack }) => {
     },
   ];
 
-  // Other Fields
   const otherFields = [
     { 
       label: 'Nationality', 
@@ -508,14 +565,14 @@ const ProfileValidatorApp = ({ id, onBack }) => {
       {showSubmissionModal && (
         <SubmissionModal 
           onClose={() => setShowSubmissionModal(false)} 
-          message={successMessage}
+          message="Your validation has been submitted successfully"
           commonCompanies={commonCompanies}
         />
       )}
       {showValidationBlockedModal && (
         <ValidationNotAllowedModal 
           onClose={() => setShowValidationBlockedModal(false)}
-          error={validationError}
+          error={validationCheckError || validationMessage || "You cannot validate this profile."}
         />
       )}
       
@@ -532,7 +589,6 @@ const ProfileValidatorApp = ({ id, onBack }) => {
           </button>
         </div>
 
-        {/* Company Validation Status */}
         {commonCompanies && commonCompanies.length > 0 && (
           <div className="mb-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded max-w-4xl mx-auto">
             <div className="flex items-center">
@@ -591,9 +647,11 @@ const ProfileValidatorApp = ({ id, onBack }) => {
                     name={field.key}
                     feedback={feedback}
                     onFeedbackChange={handleFeedbackChange}
-                    isLocked={hasVoted && !isEditing}
+                    isLocked={validatedFields.includes(field.key)}
                     badgeLevel={field.badgeLevel}
                     visibility={field.visibility}
+                    canValidate={canValidate}
+                    isEditing={isEditing}
                   />
                 ))}
               </div>
@@ -608,9 +666,11 @@ const ProfileValidatorApp = ({ id, onBack }) => {
                     name={field.key}
                     feedback={feedback}
                     onFeedbackChange={handleFeedbackChange}
-                    isLocked={hasVoted && !isEditing}
+                    isLocked={validatedFields.includes(field.key)}
                     badgeLevel={field.badgeLevel}
                     visibility={field.visibility}
+                    canValidate={canValidate}
+                    isEditing={isEditing}
                   />
                 ))}
               </div>
@@ -625,9 +685,11 @@ const ProfileValidatorApp = ({ id, onBack }) => {
                     name={field.key}
                     feedback={feedback}
                     onFeedbackChange={handleFeedbackChange}
-                    isLocked={hasVoted && !isEditing}
+                    isLocked={validatedFields.includes(field.key)}
                     badgeLevel={field.badgeLevel}
                     visibility={field.visibility}
+                    canValidate={canValidate}
+                    isEditing={isEditing}
                   />
                 ))}
               </div>
@@ -644,9 +706,11 @@ const ProfileValidatorApp = ({ id, onBack }) => {
                       name={`exp-jobTitle-${i}`}
                       feedback={feedback}
                       onFeedbackChange={handleFeedbackChange}
-                      isLocked={hasVoted && !isEditing}
+                      isLocked={validatedFields.includes(`exp-jobTitle-${i}`)}
                       badgeLevel={getNestedBadge('experience', i, 'jobTitle')}
                       visibility={getNestedVisibility('experience', i, 'jobTitle')}
+                      canValidate={canValidate}
+                      isEditing={isEditing}
                     />
                     <InfoField
                       label="Company"
@@ -654,51 +718,12 @@ const ProfileValidatorApp = ({ id, onBack }) => {
                       name={`exp-company-${i}`}
                       feedback={feedback}
                       onFeedbackChange={handleFeedbackChange}
-                      isLocked={hasVoted && !isEditing}
+                      isLocked={validatedFields.includes(`exp-company-${i}`)}
                       badgeLevel={getNestedBadge('experience', i, 'company')}
                       visibility={getNestedVisibility('experience', i, 'company')}
+                      canValidate={canValidate}
+                      isEditing={isEditing}
                     />
-                    <InfoField
-                      label="Industry"
-                      value={exp.industry}
-                      name={`exp-industry-${i}`}
-                      feedback={feedback}
-                      onFeedbackChange={handleFeedbackChange}
-                      isLocked={hasVoted && !isEditing}
-                      badgeLevel={getNestedBadge('experience', i, 'industry')}
-                      visibility={getNestedVisibility('experience', i, 'industry')}
-                    />
-                    <InfoField
-                      label="Job Functions"
-                      value={exp.jobFunctions?.join(', ')}
-                      name={`exp-jobFunctions-${i}`}
-                      feedback={feedback}
-                      onFeedbackChange={handleFeedbackChange}
-                      isLocked={hasVoted && !isEditing}
-                      badgeLevel={getNestedBadge('experience', i, 'jobFunctions')}
-                      visibility={getNestedVisibility('experience', i, 'jobFunctions')}
-                    />
-                    <InfoField
-                      label="Start Date"
-                      value={new Date(exp.startDate).toLocaleDateString()}
-                      name={`exp-startDate-${i}`}
-                      feedback={feedback}
-                      onFeedbackChange={handleFeedbackChange}
-                      isLocked={hasVoted && !isEditing}
-                      badgeLevel={getNestedBadge('experience', i, 'startDate')}
-                      visibility={getNestedVisibility('experience', i, 'startDate')}
-                    />
-                    <InfoField
-                      label="End Date"
-                      value={exp.endDate ? new Date(exp.endDate).toLocaleDateString() : 'Present'}
-                      name={`exp-endDate-${i}`}
-                      feedback={feedback}
-                      onFeedbackChange={handleFeedbackChange}
-                      isLocked={hasVoted && !isEditing}
-                      badgeLevel={getNestedBadge('experience', i, 'endDate')}
-                      visibility={getNestedVisibility('experience', i, 'endDate')}
-                    />
-
                     {exp.experienceFile && getNestedVisibility('experience', i, 'experienceFile') === 'Public' && (
                       <div className="mt-3">
                         <button
@@ -706,34 +731,17 @@ const ProfileValidatorApp = ({ id, onBack }) => {
                           onClick={() => toggleFile(setShowLetter, i)}
                           className="flex items-center gap-2 text-sm text-orange-600 hover:text-orange-800 transition"
                         >
-                          <DocumentIcon className="w-4 h-4" />
+                          <svg className="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                          </svg>
                           {showLetter[i] ? 'Hide' : 'View'} Experience Document
                         </button>
                         {showLetter[i] && (
-                          <div className="mt-2">
-                            {exp.experienceFile.endsWith('.pdf') ? (
-                              <iframe
-                                src={exp.experienceFile}
-                                className="w-full h-96 rounded border"
-                                title="Experience Document"
-                              />
-                            ) : (
-                              <img src={exp.experienceFile} alt="Experience Document" className="w-full rounded" />
-                            )}
-                          </div>
-                        )}
-                        <div className="mt-2">
-                          <InfoField
-                            label="Experience Document"
-                            value="Uploaded"
-                            name={`exp-experienceFile-${i}`}
-                            feedback={feedback}
-                            onFeedbackChange={handleFeedbackChange}
-                            isLocked={hasVoted && !isEditing}
-                            badgeLevel={getNestedBadge('experience', i, 'experienceFile')}
-                            visibility={getNestedVisibility('experience', i, 'experienceFile')}
+                          <DocumentViewer 
+                            fileUrl={exp.experienceFile} 
+                            onClose={() => toggleFile(setShowLetter, i)} 
                           />
-                        </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -750,41 +758,12 @@ const ProfileValidatorApp = ({ id, onBack }) => {
                       name={`edu-degreeTitle-${i}`}
                       feedback={feedback}
                       onFeedbackChange={handleFeedbackChange}
-                      isLocked={hasVoted && !isEditing}
+                      isLocked={validatedFields.includes(`edu-degreeTitle-${i}`)}
                       badgeLevel={getNestedBadge('education', i, 'degreeTitle')}
                       visibility={getNestedVisibility('education', i, 'degreeTitle')}
+                      canValidate={canValidate}
+                      isEditing={isEditing}
                     />
-                    <InfoField
-                      label="Institute"
-                      value={edu.institute}
-                      name={`edu-institute-${i}`}
-                      feedback={feedback}
-                      onFeedbackChange={handleFeedbackChange}
-                      isLocked={hasVoted && !isEditing}
-                      badgeLevel={getNestedBadge('education', i, 'institute')}
-                      visibility={getNestedVisibility('education', i, 'institute')}
-                    />
-                    <InfoField
-                      label="Start Date"
-                      value={new Date(edu.startDate).toLocaleDateString()}
-                      name={`edu-startDate-${i}`}
-                      feedback={feedback}
-                      onFeedbackChange={handleFeedbackChange}
-                      isLocked={hasVoted && !isEditing}
-                      badgeLevel={getNestedBadge('education', i, 'startDate')}
-                      visibility={getNestedVisibility('education', i, 'startDate')}
-                    />
-                    <InfoField
-                      label="End Date"
-                      value={new Date(edu.endDate).toLocaleDateString()}
-                      name={`edu-endDate-${i}`}
-                      feedback={feedback}
-                      onFeedbackChange={handleFeedbackChange}
-                      isLocked={hasVoted && !isEditing}
-                      badgeLevel={getNestedBadge('education', i, 'endDate')}
-                      visibility={getNestedVisibility('education', i, 'endDate')}
-                    />
-
                     {edu.degreeFile && getNestedVisibility('education', i, 'degreeFile') === 'Public' && (
                       <div className="mt-3">
                         <button
@@ -792,34 +771,17 @@ const ProfileValidatorApp = ({ id, onBack }) => {
                           onClick={() => toggleFile(setShowDegree, i)}
                           className="flex items-center gap-2 text-sm text-orange-600 hover:text-orange-800 transition"
                         >
-                          <DocumentIcon className="w-4 h-4" />
+                          <svg className="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                          </svg>
                           {showDegree[i] ? 'Hide' : 'View'} Degree Certificate
                         </button>
                         {showDegree[i] && (
-                          <div className="mt-2">
-                            {edu.degreeFile.endsWith('.pdf') ? (
-                              <iframe
-                                src={edu.degreeFile}
-                                className="w-full h-96 rounded border"
-                                title="Degree Certificate"
-                              />
-                            ) : (
-                              <img src={edu.degreeFile} alt="Degree Certificate" className="w-full rounded" />
-                            )}
-                          </div>
-                        )}
-                        <div className="mt-2">
-                          <InfoField
-                            label="Degree Certificate"
-                            value="Uploaded"
-                            name={`edu-degreeFile-${i}`}
-                            feedback={feedback}
-                            onFeedbackChange={handleFeedbackChange}
-                            isLocked={hasVoted && !isEditing}
-                            badgeLevel={getNestedBadge('education', i, 'degreeFile')}
-                            visibility={getNestedVisibility('education', i, 'degreeFile')}
+                          <DocumentViewer 
+                            fileUrl={edu.degreeFile} 
+                            onClose={() => toggleFile(setShowDegree, i)} 
                           />
-                        </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -839,9 +801,19 @@ const ProfileValidatorApp = ({ id, onBack }) => {
               </button>
             )}
             
+            {isEditing && (
+              <button
+                type="button"
+                onClick={handleCancelEdit}
+                className="bg-gray-300 text-gray-700 px-6 py-2 rounded-md hover:bg-gray-400 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500"
+              >
+                Cancel
+              </button>
+            )}
+            
             <button
               type="submit"
-              disabled={(!isEditing && hasVoted) || Object.keys(feedback).length === 0 || !canValidate}
+              disabled={(!isEditing && hasVoted) || (!hasNewValidations() && isEditing) || !canValidate}
               className="bg-orange-600 text-white px-6 py-2 rounded-md hover:bg-orange-700 transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
               {!canValidate ? 'Validation Not Allowed' : 
@@ -849,7 +821,6 @@ const ProfileValidatorApp = ({ id, onBack }) => {
             </button>
           </div>
 
-          {/* Show validation requirements */}
           {!canValidate && (
             <div className="mt-4 p-3 bg-yellow-100 border border-yellow-400 text-yellow-700 rounded">
               <div className="flex items-center">

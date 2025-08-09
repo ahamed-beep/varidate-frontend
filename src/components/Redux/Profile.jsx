@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import axiosinstance from "../Connection/Api";
+import axiosinstance from "../../Connection/Api";
 
 export const submitProfile = createAsyncThunk(
   "profile/submitProfile",
@@ -140,6 +140,52 @@ export const updateBadgeScores = createAsyncThunk(
   }
 );
 
+export const fetchAllProfilesAdmin = createAsyncThunk(
+  "profile/fetchAllAdmin",
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await axiosinstance.get('/admin/profiles');
+      return response.data;
+    } catch (err) {
+      return rejectWithValue(err.response?.data || err.message);
+    }
+  }
+);
+
+// Get profile details (admin view)
+export const fetchProfileDetailAdmin = createAsyncThunk(
+  "profile/fetchDetailAdmin",
+  async (id, { rejectWithValue }) => {
+    try {
+      const response = await axiosinstance.get(`/admin/profile/${id}`);
+      console.log(response.data.profile)
+      return response.data.profile;
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.message || "Failed to fetch profile");
+    }
+  }
+);
+export const updateProfileAccess = createAsyncThunk(
+  "profile/updateAccess",
+  async ({ id, hasAccess }, { rejectWithValue }) => {
+    try {
+      console.log(`Dispatching update for profile ${id} to ${hasAccess}`);
+      const response = await axiosinstance.patch(
+        `/admin/profile/${id}/access`,
+        { hasAccess }
+      );
+      
+      console.log('Update response:', response.data);
+      return response.data.profile;
+    } catch (err) {
+      console.error('Update access error:', err.response?.data || err.message);
+      return rejectWithValue(err.response?.data?.message || "Failed to update access");
+    }
+  }
+);
+
+
+
 const profileSlice = createSlice({
   name: "profile",
   initialState: {
@@ -168,7 +214,13 @@ const profileSlice = createSlice({
     sharedUsers: [],
     sharedUsersLoading: false,
     sharedUsersError: null,
-    validationMessage: ''
+    validationMessage: '',
+        adminProfiles: [],
+    adminProfilesLoading: false,
+    adminProfilesError: null,
+    adminProfileDetail: null,
+    adminProfileLoading: false,
+    adminProfileError: null,
   },
   reducers: {
     resetProfileState: (state) => {
@@ -187,8 +239,12 @@ const profileSlice = createSlice({
       state.commonCompanies = [];
       state.validationMessage = '';
     },
+  
+      clearSelectedProfile: (state) => {
+      state.selectedProfile = null;
+      state.updatedProfile = null;
+    },
     clearValidationErrors: (state) => {
-      state.validationErrors = [];
       state.error = null;
     }
   },
@@ -322,7 +378,57 @@ const profileSlice = createSlice({
       .addCase(fetchProfilePicture.rejected, (state, action) => {
         state.pictureLoading = false;
         state.pictureError = action.payload;
-      });
+      })
+       .addCase(fetchAllProfilesAdmin.pending, (state) => {
+        state.adminProfilesLoading = true;
+        state.adminProfilesError = null;
+      })
+      .addCase(fetchAllProfilesAdmin.fulfilled, (state, action) => {
+        state.adminProfilesLoading = false;
+        state.adminProfiles = action.payload.profiles || [];
+      })
+      .addCase(fetchAllProfilesAdmin.rejected, (state, action) => {
+        state.adminProfilesLoading = false;
+        state.adminProfilesError = action.payload;
+      })
+
+      // Fetch Profile Detail (Admin)
+      .addCase(fetchProfileDetailAdmin.pending, (state) => {
+        state.adminProfileLoading = true;
+        state.adminProfileError = null;
+      })
+      .addCase(fetchProfileDetailAdmin.fulfilled, (state, action) => {
+        state.adminProfileLoading = false;
+        state.adminProfileDetail = action.payload;
+      })
+      .addCase(fetchProfileDetailAdmin.rejected, (state, action) => {
+        state.adminProfileLoading = false;
+        state.adminProfileError = action.payload;
+      })
+.addCase(updateProfileAccess.pending, (state) => {
+  state.adminProfileLoading = true;
+  state.adminProfileError = null;
+})
+.addCase(updateProfileAccess.fulfilled, (state, action) => {
+  state.adminProfileLoading = false;
+  
+  // Update adminProfileDetail
+  if (state.adminProfileDetail) {
+    state.adminProfileDetail.hasAccess = action.payload.hasAccess;
+  }
+  
+  // Update in adminProfiles array
+  state.adminProfiles = state.adminProfiles.map(profile => 
+    profile._id === action.payload._id ? { ...profile, hasAccess: action.payload.hasAccess } : profile
+  );
+  
+  console.log('Redux state updated:', action.payload);
+})
+.addCase(updateProfileAccess.rejected, (state, action) => {
+  state.adminProfileLoading = false;
+  state.adminProfileError = action.payload;
+  console.error('Update failed:', action.payload);
+});
   }
 });
 
@@ -330,7 +436,8 @@ export const {
   resetProfileState, 
   setFormData, 
   resetValidationState, 
-  clearValidationErrors 
+  clearValidationErrors,
+  clearSelectedProfile,
 } = profileSlice.actions;
 
 export default profileSlice.reducer;

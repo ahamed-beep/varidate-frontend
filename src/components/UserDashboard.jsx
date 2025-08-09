@@ -13,14 +13,14 @@ import {
 } from 'lucide-react'
 import Home from './UserForm.jsx'
 import MiniDashboard from './MiniDashboard.jsx'
-import { logouts } from '../Redux/Auth.jsx'
 import { useDispatch } from 'react-redux'
 import { useNavigate } from 'react-router'
 import { toast } from 'react-toastify'
 import Task from './Task.jsx'
-import { fetchProfilePicture } from '../Redux/profile.jsx'
+import { fetchProfilePicture } from './Redux/profile.jsx'
 import { useSelector } from 'react-redux'
 import ProfileValidatorApp from './Userprofiledetail.jsx'
+import { logoutUser } from './Redux/Auth.jsx'
 
 
 function Userdashboard() {
@@ -40,13 +40,15 @@ useEffect(() => {
 
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    dispatch(logouts());
-    localStorage.removeItem('isLoggedIn'); 
-    localStorage.removeItem('userId'); 
+const handleLogout = async () => {
+  try {
+    await dispatch(logoutUser()).unwrap();
     toast.success("Logged out successfully");
-    navigate('/');
-  };
+    navigate('/log');
+  } catch (error) {
+    toast.error("Logout failed");
+  }
+};
 
   const handleProfileClick = (profileId) => {
     setSelectedProfileId(profileId);

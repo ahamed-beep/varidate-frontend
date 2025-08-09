@@ -1,10 +1,12 @@
+// Task.js
 'use client';
 import React, { useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { fetchPublicProfiles } from '../Redux/profile';
 import { Search } from 'lucide-react';
+import { clearSelectedProfile, fetchPublicProfiles } from './Redux/profile';
+import ProfileValidatorApp from './Userprofiledetail';
 
-const Task = ({ onProfileClick }) => {
+const Task = () => {
   const dispatch = useDispatch();
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState({
@@ -15,6 +17,7 @@ const Task = ({ onProfileClick }) => {
     jobFunctions: '',
     shiftPreferences: ''
   });
+  const [selectedProfileId, setSelectedProfileId] = useState(null);
 
   const userId = localStorage.getItem('userId');
   const { publicProfiles = [], publicProfilesLoading } = useSelector(state => state.profile);
@@ -23,11 +26,22 @@ const Task = ({ onProfileClick }) => {
     dispatch(fetchPublicProfiles(userId));
   }, [dispatch, userId]);
 
-  const getMongooseDoc = (doc) => doc?._doc || doc;
+  const onProfileClick = (id) => {
+    setSelectedProfileId(id);
+  };
 
+  const handleBackFromProfile = () => {
+    setSelectedProfileId(null);
+    dispatch(clearSelectedProfile());
+  };
+
+  if (selectedProfileId) {
+    return <ProfileValidatorApp id={selectedProfileId} onBack={handleBackFromProfile} />;
+  }
+
+  const getMongooseDoc = (doc) => doc?._doc || doc;
   const shouldShowField = (visibility) => visibility === 'Public';
 
-  // Get all unique values for each filter category
   const getFilterOptions = () => {
     const options = {
       degreeTitles: new Set(),
@@ -38,7 +52,14 @@ const Task = ({ onProfileClick }) => {
       shiftPreferences: new Set()
     };
 
-    // Add predefined options first
+    // Add predefined options
+    const DEGREE_TITLES = ["Bachelor of Science", "Bachelor of Arts", "Master of Science", "Master of Arts", "PhD", "Associate Degree", "Diploma", "Other"];
+    const JOB_TITLES = ["Software Engineer", "Data Analyst", "Project Manager", "Marketing Specialist", "Sales Executive", "HR Manager", "Accountant", "Operations Manager", "Other"];
+    const COMPANIES = ["Systems Limited", "Techlogix", "ArhamSoft", "10Pearls", "Contour Software", "Netsol", "Avanza Solutions", "Other"];
+    const INDUSTRIES = ["Technology", "Healthcare", "Finance", "Education", "Manufacturing", "Retail", "Consulting", "Other"];
+    const JOB_FUNCTIONS = ["Software Development", "Data Analysis", "Project Management", "Marketing", "Sales", "Human Resources", "Finance", "Operations"];
+    const SHIFT_PREFERENCES = ["Day Shift", "Night Shift", "Flexible", "Remote"];
+
     DEGREE_TITLES.forEach(title => options.degreeTitles.add(title));
     JOB_TITLES.forEach(title => options.jobTitles.add(title));
     COMPANIES.forEach(company => options.companies.add(company));
@@ -46,9 +67,7 @@ const Task = ({ onProfileClick }) => {
     JOB_FUNCTIONS.forEach(func => options.jobFunctions.add(func));
     SHIFT_PREFERENCES.forEach(shift => options.shiftPreferences.add(shift));
 
-    // Add options from profiles
     publicProfiles.forEach((profile) => {
-      // Education fields
       profile.education?.forEach(edu => {
         const education = getMongooseDoc(edu);
         if (shouldShowField(education?.degreeTitleVisibility) && education?.degreeTitle) {
@@ -56,7 +75,6 @@ const Task = ({ onProfileClick }) => {
         }
       });
 
-      // Experience fields
       profile.experience?.forEach(exp => {
         const experience = getMongooseDoc(exp);
         if (shouldShowField(experience?.jobTitleVisibility) && experience?.jobTitle) {
@@ -73,7 +91,6 @@ const Task = ({ onProfileClick }) => {
         }
       });
 
-      // Profile fields
       if (shouldShowField(profile.shiftPreferencesVisibility) && profile.shiftPreferences?.length) {
         profile.shiftPreferences.forEach(sp => options.shiftPreferences.add(sp));
       }
@@ -111,7 +128,6 @@ const Task = ({ onProfileClick }) => {
   };
 
   const filteredProfiles = publicProfiles.filter((profile) => {
-    // Check search term against visible fields
     const searchFields = [
       shouldShowField(profile.nameVisibility) ? profile.name : null,
       shouldShowField(profile.emailVisibility) ? profile.email : null,
@@ -123,7 +139,6 @@ const Task = ({ onProfileClick }) => {
         field.toLowerCase().includes(searchTerm.toLowerCase())
       );
 
-    // Check education filters
     const matchesDegree = filters.degreeTitle === '' || 
       profile.education?.some(edu => {
         const education = getMongooseDoc(edu);
@@ -131,7 +146,6 @@ const Task = ({ onProfileClick }) => {
                education?.degreeTitle === filters.degreeTitle;
       });
 
-    // Check experience filters
     const matchesExperience = 
       (filters.jobTitle === '' || 
         profile.experience?.some(exp => {
@@ -158,7 +172,6 @@ const Task = ({ onProfileClick }) => {
                  experience?.jobFunctions?.includes(filters.jobFunctions);
         }));
 
-    // Check profile filters
     const matchesProfile = 
       filters.shiftPreferences === '' || 
       (shouldShowField(profile.shiftPreferencesVisibility) && 
@@ -174,7 +187,6 @@ const Task = ({ onProfileClick }) => {
           🌟 <span className="text-[#f4793d]">Featured Public Profiles</span>
         </h1>
 
-        {/* Search Bar */}
         <div className="relative w-full mb-6 max-w-2xl mx-auto">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
             <Search className="h-5 w-5 text-gray-400" />
@@ -188,7 +200,6 @@ const Task = ({ onProfileClick }) => {
           />
         </div>
 
-        {/* Filter Section */}
         <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm mb-8">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
             <h3 className="text-lg font-semibold text-gray-800">Filters</h3>
@@ -201,7 +212,6 @@ const Task = ({ onProfileClick }) => {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {/* Degree Title Filter */}
             <div className="space-y-1">
               <label className="block text-sm font-medium text-gray-700">Degree Title</label>
               <select
@@ -211,14 +221,11 @@ const Task = ({ onProfileClick }) => {
               >
                 <option value="">All Degree Titles</option>
                 {filterOptions.degreeTitles.map((title, idx) => (
-                  <option key={`degree-${idx}`} value={title}>
-                    {title}
-                  </option>
+                  <option key={`degree-${idx}`} value={title}>{title}</option>
                 ))}
               </select>
             </div>
 
-            {/* Job Title Filter */}
             <div className="space-y-1">
               <label className="block text-sm font-medium text-gray-700">Job Title</label>
               <select
@@ -228,14 +235,11 @@ const Task = ({ onProfileClick }) => {
               >
                 <option value="">All Job Titles</option>
                 {filterOptions.jobTitles.map((title, idx) => (
-                  <option key={`job-${idx}`} value={title}>
-                    {title}
-                  </option>
+                  <option key={`job-${idx}`} value={title}>{title}</option>
                 ))}
               </select>
             </div>
 
-            {/* Company Filter */}
             <div className="space-y-1">
               <label className="block text-sm font-medium text-gray-700">Company</label>
               <select
@@ -245,14 +249,11 @@ const Task = ({ onProfileClick }) => {
               >
                 <option value="">All Companies</option>
                 {filterOptions.companies.map((company, idx) => (
-                  <option key={`company-${idx}`} value={company}>
-                    {company}
-                  </option>
+                  <option key={`company-${idx}`} value={company}>{company}</option>
                 ))}
               </select>
             </div>
 
-            {/* Industry Filter */}
             <div className="space-y-1">
               <label className="block text-sm font-medium text-gray-700">Industry</label>
               <select
@@ -262,14 +263,11 @@ const Task = ({ onProfileClick }) => {
               >
                 <option value="">All Industries</option>
                 {filterOptions.industries.map((industry, idx) => (
-                  <option key={`industry-${idx}`} value={industry}>
-                    {industry}
-                  </option>
+                  <option key={`industry-${idx}`} value={industry}>{industry}</option>
                 ))}
               </select>
             </div>
 
-            {/* Job Functions Filter */}
             <div className="space-y-1">
               <label className="block text-sm font-medium text-gray-700">Job Functions</label>
               <select
@@ -279,14 +277,11 @@ const Task = ({ onProfileClick }) => {
               >
                 <option value="">All Job Functions</option>
                 {filterOptions.jobFunctions.map((func, idx) => (
-                  <option key={`func-${idx}`} value={func}>
-                    {func}
-                  </option>
+                  <option key={`func-${idx}`} value={func}>{func}</option>
                 ))}
               </select>
             </div>
 
-            {/* Shift Preferences Filter */}
             <div className="space-y-1">
               <label className="block text-sm font-medium text-gray-700">Shift Preferences</label>
               <select
@@ -296,16 +291,13 @@ const Task = ({ onProfileClick }) => {
               >
                 <option value="">All Shift Preferences</option>
                 {filterOptions.shiftPreferences.map((shift, idx) => (
-                  <option key={`shift-${idx}`} value={shift}>
-                    {shift}
-                  </option>
+                  <option key={`shift-${idx}`} value={shift}>{shift}</option>
                 ))}
               </select>
             </div>
           </div>
         </div>
 
-        {/* Results Section */}
         {publicProfilesLoading ? (
           <div className="text-center py-12">
             <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#f4793d]"></div>
@@ -434,64 +426,3 @@ const Task = ({ onProfileClick }) => {
 };
 
 export default Task;
-
-// Constants for dropdown options
-const DEGREE_TITLES = [
-  "Bachelor of Science",
-  "Bachelor of Arts", 
-  "Master of Science",
-  "Master of Arts",
-  "PhD",
-  "Associate Degree",
-  "Diploma",
-  "Other"
-];
-
-const JOB_TITLES = [
-  "Software Engineer",
-  "Data Analyst",
-  "Project Manager",
-  "Marketing Specialist",
-  "Sales Executive",
-  "HR Manager",
-  "Accountant",
-  "Operations Manager",
-  "Other"
-];
-
-const COMPANIES = [
-  "Systems Limited",
-  "Techlogix",
-  "ArhamSoft",
-  "10Pearls",
-  "Contour Software",
-  "Netsol",
-  "Avanza Solutions",
-  "Other"
-];
-
-const INDUSTRIES = [
-  "Technology",
-  "Healthcare",
-  "Finance",
-  "Education",
-  "Manufacturing",
-  "Retail",
-  "Consulting",
-  "Other"
-];
-
-const JOB_FUNCTIONS = [
-  "Software Development",
-  "Data Analysis",
-  "Project Management",
-  "Marketing",
-  "Sales",
-  "Human Resources",
-  "Finance",
-  "Operations"
-];
-
-const SHIFT_PREFERENCES = [
-"Day Shift", "Night Shift", "Flexible", "Remote"
-];

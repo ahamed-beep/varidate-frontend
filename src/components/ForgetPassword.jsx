@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { forgotPassword, resetPassword } from '../Redux/Auth';
+import { forgotPassword, resetPassword } from './Redux/Auth';
 import { useNavigate } from 'react-router';
 import { Eye, EyeOff } from 'lucide-react'; // icon library
 

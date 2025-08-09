@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
-import { loginuserform } from '../Redux/Auth';
+import { loginuserform } from './Redux/Auth';
 
 function Login() {
   const [email, setEmail] = useState('');
@@ -15,23 +15,19 @@ const fromhandler = async (e) => {
 
   try {
     const response = await dispatch(loginuserform(data));
+    
+    if (response.payload?.success) {
+      const { role } = response.payload.user;
 
-    if (response?.payload?.message === 'Login successful.') {
-     const { id, email, firstname, lastname } = response.payload.user;
-
-
-      // ✅ Store in localStorage
-      localStorage.setItem('isLoggedIn', 'true');
-      localStorage.setItem('userEmail', email);
-      localStorage.setItem('userName', `${firstname} ${lastname}`);
-      localStorage.setItem('userId', id); 
-      
-
-      navigate('/admin');
+      // Redirect based on role
+      if (role === 'admin') {
+        navigate('/admin-dashboard');
+      } else {
+        navigate('/');
+      }
     }
-
   } catch (error) {
-    // handled by toast
+    // Error handling is done by the thunk
   }
 };
 

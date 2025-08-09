@@ -1,5 +1,5 @@
-import React from "react";
-import { Routes, Route } from "react-router-dom";
+import React, { useEffect } from "react";
+import { Routes, Route, useNavigate } from "react-router-dom";
 import Form from "./components/Form";
 import Newaccount from "./components/Newaccount";
 import { ToastContainer } from "react-toastify";
@@ -12,10 +12,37 @@ import ForgotPassword from "./components/ForgetPassword";
 import SuccessMessage from "./components/SubmissionSuccess";
 import ProfileValidatorApp from "./components/Userprofiledetail";
 import PromptForm from "./prompt/DeepFrom";
+import { autoLogin } from "./components/Redux/Auth";
+import { useDispatch, useSelector } from "react-redux";
+import AdminDashboard from "./components/Admin/AdminDashboard";
+import AdminProfilesList from "./components/Admin/AdminProfilelist";
+import AdminProfileDetail from "./components/Admin/AdminProfileDetail";
+import LockedAccount from "./components/Admin/LockedAccount";
 
 
 
 function App() {
+
+    const dispatch = useDispatch();
+    const navigate = useNavigate();
+  const { isAuthenticated, user } = useSelector(state => state.auth);
+  
+
+  useEffect(() => {
+    // Try auto-login on app load
+    if (localStorage.getItem('token') && !isAuthenticated) {
+      dispatch(autoLogin());
+    }
+  }, [dispatch, isAuthenticated]);
+
+    useEffect(() => {
+    if (isAuthenticated) {
+      const currentRole = user?.role || localStorage.getItem('userRole');
+      if (currentRole === 'admin' && window.location.pathname === '/') {
+        navigate('/admin-dashboard');
+      }
+    }
+  }, [isAuthenticated, user]);
   return (
     <div>
       <ToastContainer
@@ -32,7 +59,7 @@ function App() {
 />
 
       <Routes>
-        <Route path="/" element={<Form />} />
+        <Route path="/log" element={<Form />} />
         <Route path="/create" element={<Newaccount />} />
 
         
@@ -44,7 +71,7 @@ function App() {
 
 
        <Route
-          path="/admin"
+          path="/"
           element={
             <ProtectedRoute>
               <Userdashboard />
@@ -59,9 +86,25 @@ function App() {
             </ProtectedRoute>
           }
         />
+ <Route path="/admin-dashboard" element={
+          <ProtectedRoute adminOnly>
+            <AdminDashboard />
+          </ProtectedRoute>
+        } />
+         <Route path="/admin/profiles" element={
+          <ProtectedRoute >
+            <AdminProfilesList />
+          </ProtectedRoute>
+        } />
+         <Route path="/admin/profiles/:id" element={
+          <ProtectedRoute >
+            <AdminProfileDetail />
+          </ProtectedRoute>
+        } />
 
     
-        
+ 
+<Route path="/locked" element={<LockedAccount />} />
         <Route path="/verify-email" element={<VerifyEmailCode />} /> {/* Add this line */}
        
       

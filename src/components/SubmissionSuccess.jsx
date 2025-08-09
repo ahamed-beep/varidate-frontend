@@ -68,7 +68,7 @@ function SuccessMessage() {
             boxShadow: "0 2px 8px rgba(244, 121, 61, 0.4)",
           }}
           >
-            <Link to='/admin'>
+            <Link to='/'>
             
           Go Back
             </Link>

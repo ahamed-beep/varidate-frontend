@@ -360,6 +360,7 @@ const UserForm = () => {
       shiftPreferences: [],
       workLocationPreference: "",
       workAuthorization: [],
+      hasAccess:true
     },
     fieldVisibilities: {},
     education: [{ ...newEducationTemplate, id: Date.now().toString() }],

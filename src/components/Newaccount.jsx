@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
-import { signupuserform } from '../Redux/Auth';
 import { toast } from 'react-toastify';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
+import { signupuserform } from './Redux/Auth';
 
 function Newaccount() {
   const [formData, setFormData] = useState({
