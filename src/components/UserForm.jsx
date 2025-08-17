@@ -97,7 +97,8 @@ const newEducationTemplate = {
   startDateVisibility: "Public",
   endDateVisibility: "Public",
   websiteVisibility: "Public",
-  degreeFileVisibility: "Public"
+  degreeFileVisibility: "Public",
+  isSaved: false
 };
 
 const newExperienceTemplate = {
@@ -117,7 +118,8 @@ const newExperienceTemplate = {
   websiteVisibility: "Public",
   experienceFileVisibility: "Public",
   jobFunctionsVisibility: "Public",
-  industryVisibility: "Public"
+  industryVisibility: "Public",
+  isSaved: false
 };
 
 const FileUpload = ({ label, onDrop, file, className = "", disabled = false }) => {
@@ -287,7 +289,7 @@ const CheckboxGroup = ({ legend, options, selectedOptions, onChange, className =
   );
 };
 
-const FieldWrapper = ({ children, fieldName, formData, handleFieldVisibility, isCnicField = false, disabled = false }) => {
+const FieldWrapper = ({ children, fieldName, formData, handleFieldVisibility, isCnicField = false, disabled = false, isEducationOrExperience = false }) => {
   const visibility = formData.fieldVisibilities?.[fieldName] || "Public";
 
   return (
@@ -297,19 +299,37 @@ const FieldWrapper = ({ children, fieldName, formData, handleFieldVisibility, is
         <div className="flex flex-col gap-1 mt-1 p-2 rounded bg-slate-50">
           <span className="text-xs font-medium text-slate-600">Visibility:</span>
           <div className="flex gap-2">
-            {VISIBILITY_PRESETS.map((option) => (
-              <label key={option} className="flex items-center gap-1 text-xs cursor-pointer">
-                <input
-                  type="radio"
-                  name={`vis-${fieldName}`}
-                  value={option}
-                  checked={visibility === option}
-                  onChange={() => handleFieldVisibility(fieldName, option)}
-                  className="w-3 h-3 text-[#f4793d] border-gray-300 focus:ring-[#f4793d]"
-                />
-                <span className="text-slate-700">{option}</span>
-              </label>
-            ))}
+            {isEducationOrExperience ? (
+              // For Education and Experience sections, only show Public and Private
+              ['Public', 'Private'].map((option) => (
+                <label key={option} className="flex items-center gap-1 text-xs cursor-pointer">
+                  <input
+                    type="radio"
+                    name={`vis-${fieldName}`}
+                    value={option}
+                    checked={visibility === option}
+                    onChange={() => handleFieldVisibility(fieldName, option)}
+                    className="w-3 h-3 text-[#f4793d] border-gray-300 focus:ring-[#f4793d]"
+                  />
+                  <span className="text-slate-700">{option}</span>
+                </label>
+              ))
+            ) : (
+              // For other sections, show all options
+              VISIBILITY_PRESETS.map((option) => (
+                <label key={option} className="flex items-center gap-1 text-xs cursor-pointer">
+                  <input
+                    type="radio"
+                    name={`vis-${fieldName}`}
+                    value={option}
+                    checked={visibility === option}
+                    onChange={() => handleFieldVisibility(fieldName, option)}
+                    className="w-3 h-3 text-[#f4793d] border-gray-300 focus:ring-[#f4793d]"
+                  />
+                  <span className="text-slate-700">{option}</span>
+                </label>
+              ))
+            )}
           </div>
         </div>
       )}
@@ -326,6 +346,10 @@ const UserForm = () => {
   const [submitted, setSubmitted] = useState(false);
   const [userName, setUserName] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showEducationConfirm, setShowEducationConfirm] = useState(false);
+  const [showExperienceConfirm, setShowExperienceConfirm] = useState(false);
+  const [educationSaved, setEducationSaved] = useState(false);
+  const [experienceSaved, setExperienceSaved] = useState(false);
   
   const userEmail = localStorage.getItem('userEmail') || '';
 
@@ -360,7 +384,7 @@ const UserForm = () => {
       shiftPreferences: [],
       workLocationPreference: "",
       workAuthorization: [],
-      hasAccess:true
+      hasAccess: true
     },
     fieldVisibilities: {},
     education: [{ ...newEducationTemplate, id: Date.now().toString() }],
@@ -373,7 +397,7 @@ const UserForm = () => {
   });
   const [selectedPreset, setSelectedPreset] = useState("");
 
- useEffect(() => {
+  useEffect(() => {
     const checkExistingProfile = async () => {
       try {
         const userId = localStorage.getItem("userId");
@@ -384,10 +408,8 @@ const UserForm = () => {
           setProfileId(profile._id);
           setEditMode(false);
           
-          // Create fieldVisibilities object from profile data
           const fieldVisibilities = {};
           
-          // Personal fields visibility - NEW APPROACH
           if (profile.nameVisibility) fieldVisibilities['name'] = profile.nameVisibility;
           if (profile.mobileVisibility) fieldVisibilities['mobile'] = profile.mobileVisibility;
           if (profile.emailVisibility) fieldVisibilities['email'] = profile.emailVisibility;
@@ -403,11 +425,9 @@ const UserForm = () => {
           if (profile.shiftPreferencesVisibility) fieldVisibilities['shiftPreferences'] = profile.shiftPreferencesVisibility;
           if (profile.workAuthorizationVisibility) fieldVisibilities['workAuthorization'] = profile.workAuthorizationVisibility;
           
-          // Files visibility
           if (profile.resumeVisibility) fieldVisibilities['resume'] = profile.resumeVisibility;
           if (profile.profilePictureVisibility) fieldVisibilities['profilePicture'] = profile.profilePictureVisibility;
           
-          // Education visibility
           profile.education?.forEach((edu, eduIndex) => {
             if (edu.degreeTitleVisibility) fieldVisibilities[`education-${eduIndex}-degreeTitle`] = edu.degreeTitleVisibility;
             if (edu.instituteVisibility) fieldVisibilities[`education-${eduIndex}-institute`] = edu.instituteVisibility;
@@ -417,7 +437,6 @@ const UserForm = () => {
             if (edu.degreeFileVisibility) fieldVisibilities[`education-${eduIndex}-degreeFile`] = edu.degreeFileVisibility;
           });
           
-          // Experience visibility
           profile.experience?.forEach((exp, expIndex) => {
             if (exp.jobTitleVisibility) fieldVisibilities[`experience-${expIndex}-jobTitle`] = exp.jobTitleVisibility;
             if (exp.companyVisibility) fieldVisibilities[`experience-${expIndex}-company`] = exp.companyVisibility;
@@ -462,7 +481,8 @@ const UserForm = () => {
                   startDateVisibility: edu.startDateVisibility || "Public",
                   endDateVisibility: edu.endDateVisibility || "Public",
                   websiteVisibility: edu.websiteVisibility || "Public",
-                  degreeFileVisibility: edu.degreeFileVisibility || "Public"
+                  degreeFileVisibility: edu.degreeFileVisibility || "Public",
+                  isSaved: true
                 }))
               : [{ ...newEducationTemplate, id: Date.now().toString() }],
             experience: profile.experience?.length > 0 
@@ -483,14 +503,16 @@ const UserForm = () => {
                   websiteVisibility: exp.websiteVisibility || "Public",
                   experienceFileVisibility: exp.experienceFileVisibility || "Public",
                   jobFunctionsVisibility: exp.jobFunctionsVisibility || "Public",
-                  industryVisibility: exp.industryVisibility || "Public"
+                  industryVisibility: exp.industryVisibility || "Public",
+                  isSaved: true
                 }))
               : [{ ...newExperienceTemplate, id: Date.now().toString() }],
           };
 
           setFormData(transformedData);
+          setEducationSaved(profile.education?.length > 0);
+          setExperienceSaved(profile.experience?.length > 0);
           
-          // Handle files
           if (profile.resume) {
             setFiles(prev => ({ ...prev, resume: { name: "resume.pdf", url: profile.resume } }));
           }
@@ -582,6 +604,13 @@ const UserForm = () => {
       const { name, value } = e.target;
       const updated = [...formData[section]];
       updated[index][name] = value;
+      if (section === 'education') {
+        updated[index].isSaved = false;
+        setEducationSaved(false);
+      } else if (section === 'experience') {
+        updated[index].isSaved = false;
+        setExperienceSaved(false);
+      }
       setFormData(prev => ({ ...prev, [section]: updated }));
     }
   };
@@ -590,6 +619,13 @@ const UserForm = () => {
     if (editMode) {
       const updated = [...formData[section]];
       updated[index][field] = date;
+      if (section === 'education') {
+        updated[index].isSaved = false;
+        setEducationSaved(false);
+      } else if (section === 'experience') {
+        updated[index].isSaved = false;
+        setExperienceSaved(false);
+      }
       setFormData(prev => ({ ...prev, [section]: updated }));
     }
   };
@@ -603,6 +639,13 @@ const UserForm = () => {
         const file = e.target.files[0];
         updated[index][section === "education" ? "degreeFile" : "experienceFile"] = file;
       }
+      if (section === 'education') {
+        updated[index].isSaved = false;
+        setEducationSaved(false);
+      } else if (section === 'experience') {
+        updated[index].isSaved = false;
+        setExperienceSaved(false);
+      }
       setFormData(prev => ({ ...prev, [section]: updated }));
     }
   };
@@ -614,6 +657,13 @@ const UserForm = () => {
       updated[index][field] = options.includes(option) 
         ? options.filter(o => o !== option) 
         : [...options, option];
+      if (section === 'education') {
+        updated[index].isSaved = false;
+        setEducationSaved(false);
+      } else if (section === 'experience') {
+        updated[index].isSaved = false;
+        setExperienceSaved(false);
+      }
       setFormData(prev => ({ ...prev, [section]: updated }));
     }
   };
@@ -624,6 +674,11 @@ const UserForm = () => {
         ? { ...newEducationTemplate, id: Date.now().toString() }
         : { ...newExperienceTemplate, id: Date.now().toString() };
       setFormData(prev => ({ ...prev, [section]: [...prev[section], newItem] }));
+      if (section === 'education') {
+        setEducationSaved(false);
+      } else if (section === 'experience') {
+        setExperienceSaved(false);
+      }
     }
   };
 
@@ -633,6 +688,11 @@ const UserForm = () => {
         ...prev, 
         [section]: prev[section].filter(item => item.id !== id) 
       }));
+      if (section === 'education') {
+        setEducationSaved(false);
+      } else if (section === 'experience') {
+        setExperienceSaved(false);
+      }
     }
   };
 
@@ -652,18 +712,15 @@ const UserForm = () => {
     if (editMode && selectedPreset) {
       const newFieldVisibilities = {};
       
-      // Personal fields
       Object.keys(formData.personal).forEach(field => {
         if (field !== 'cnic') {
           newFieldVisibilities[field] = selectedPreset;
         }
       });
       
-      // Files
       newFieldVisibilities['resume'] = selectedPreset;
       newFieldVisibilities['profilePicture'] = selectedPreset;
       
-      // Education fields
       formData.education.forEach((edu, index) => {
         [
           'degreeTitle',
@@ -677,7 +734,6 @@ const UserForm = () => {
         });
       });
       
-      // Experience fields
       formData.experience.forEach((exp, index) => {
         [
           'jobTitle',
@@ -700,42 +756,116 @@ const UserForm = () => {
     }
   };
 
+  const validateEducation = () => {
+    for (const edu of formData.education) {
+      if (!edu.degreeTitle || !edu.institute || !edu.startDate || !edu.degreeFile) {
+        return false;
+      }
+    }
+    return true;
+  };
+
+  const validateExperience = () => {
+    for (const exp of formData.experience) {
+      if (!exp.jobTitle || !exp.company || !exp.startDate || !exp.experienceFile) {
+        return false;
+      }
+    }
+    return true;
+  };
+
+  const handleSaveEducation = () => {
+    if (!validateEducation()) {
+      toast.error('Please fill all required fields in education section');
+      return;
+    }
+    setShowEducationConfirm(true);
+  };
+
+  const handleSaveExperience = () => {
+    if (!validateExperience()) {
+      toast.error('Please fill all required fields in experience section');
+      return;
+    }
+    setShowExperienceConfirm(true);
+  };
+
+  const confirmSaveEducation = () => {
+    // Mark all education entries as saved
+    const updatedEducation = formData.education.map(edu => ({
+      ...edu,
+      isSaved: true
+    }));
+    
+    setFormData(prev => ({
+      ...prev,
+      education: updatedEducation
+    }));
+    
+    setEducationSaved(true);
+    setShowEducationConfirm(false);
+    toast.success('Education information saved successfully!');
+  };
+
+  const confirmSaveExperience = () => {
+    // Mark all experience entries as saved
+    const updatedExperience = formData.experience.map(exp => ({
+      ...exp,
+      isSaved: true
+    }));
+    
+    setFormData(prev => ({
+      ...prev,
+      experience: updatedExperience
+    }));
+    
+    setExperienceSaved(true);
+    setShowExperienceConfirm(false);
+    toast.success('Experience information saved successfully!');
+  };
+
+const refreshUserData = async () => {
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    const response = await axiosinstance.get('/verify-token', {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+
+    if (response.data.valid) {
+      // Update localStorage with fresh data
+      localStorage.setItem('userData', JSON.stringify(response.data.user));
+      setUserProfileData(response.data.user.profileData);
+    }
+  } catch (error) {
+    console.error('Error refreshing user data:', error);
+  }
+};
+
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Check if education and experience sections are saved
+    if (!educationSaved) {
+      toast.error('Please save your education information first');
+      return;
+    }
+    
+    if (!experienceSaved) {
+      toast.error('Please save your experience information first');
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
-      // Validate required files for new profiles
-      if (!profileId) {
-        if (!files.profilePicture || !files.resume) {
-          toast.error('Please upload both profile picture and resume');
-          setIsSubmitting(false);
-          return;
-        }
-
-        // Validate education files
-        for (const edu of formData.education) {
-          if (!edu.degreeFile) {
-            toast.error(`Please upload degree file for education: ${edu.degreeTitle}`);
-            setIsSubmitting(false);
-            return;
-          }
-        }
-
-        // Validate experience files
-        for (const exp of formData.experience) {
-          if (!exp.experienceFile) {
-            toast.error(`Please upload experience file for: ${exp.jobTitle} at ${exp.company}`);
-            setIsSubmitting(false);
-            return;
-          }
-        }
+      if (!files.profilePicture || !files.resume) {
+        toast.error('Please upload both profile picture and resume');
+        setIsSubmitting(false);
+        return;
       }
-
-        const companyNames = formData.experience.map(exp => exp.company).filter(Boolean);
-    if (companyNames.length > 0) {
-      localStorage.setItem('userCompanies', JSON.stringify(companyNames));
-    }
 
       const formDataToSend = new FormData();
       const userId = localStorage.getItem("userId");
@@ -861,7 +991,7 @@ const UserForm = () => {
       });
 
       // Submit the form
-      const endpoint = '/profile';
+      const endpoint = profileId ? '/profile' : '/profile';
       const method = profileId ? 'put' : 'post';
 
       const response = await axiosinstance[method](endpoint, formDataToSend, {
@@ -873,6 +1003,8 @@ const UserForm = () => {
       if (response.data.success) {
         toast.success(profileId ? 'Profile updated successfully!' : 'Profile submitted successfully!');
         
+await refreshUserData();
+
         if (profileId) {
           setEditMode(false);
           // Optionally refresh the data
@@ -914,6 +1046,53 @@ const UserForm = () => {
 
   return (
     <div className="min-h-screen bg-white">
+      {/* Confirmation Modals */}
+      {showEducationConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full">
+            <h3 className="text-lg font-bold mb-4">Confirm Education Information</h3>
+            <p className="mb-4">Please review your education information carefully before proceeding. You can still edit it until final submission.</p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowEducationConfirm(false)}
+                className="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmSaveEducation}
+                className="px-4 py-2 bg-[#f4793d] text-white rounded hover:bg-[#e66e33]"
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showExperienceConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full">
+            <h3 className="text-lg font-bold mb-4">Confirm Experience Information</h3>
+            <p className="mb-4">Please review your experience information carefully before proceeding. You can still edit it until final submission.</p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowExperienceConfirm(false)}
+                className="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmSaveExperience}
+                className="px-4 py-2 bg-[#f4793d] text-white rounded hover:bg-[#e66e33]"
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="bg-white text-gray-900 py-4 shadow-sm border-b border-gray-100">
         <div className="max-w-6xl mx-auto px-3">
           <div className="flex-col md:flex-row md:flex justify-between items-center">
@@ -951,7 +1130,7 @@ const UserForm = () => {
 
       <div className="max-w-6xl mx-auto px-3 py-4">
         <form className="space-y-6" onSubmit={handleSubmit}>
-       
+          {/* Personal Information Section */}
           <Section>
             <div>
               <div className="flex items-center justify-between mr-2 border-b border-[#f4793d]">
@@ -966,7 +1145,6 @@ const UserForm = () => {
                   </div>
                 </div>
 
-                {/* Single-line visibility control */}
                 {editMode && (
                   <div className="mb-4 flex items-center gap-2 p-3  rounded-lg ">
                     <span className="text-xs font-medium text-gray-700 whitespace-nowrap"> Visibility:</span>
@@ -1308,6 +1486,11 @@ const UserForm = () => {
                     <div>
                       <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-1">
                         <span>Education {index + 1}</span>
+                        {edu.isSaved && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                            Saved
+                          </span>
+                        )}
                       </h3>
                       <p className="text-gray-500 text-xxs">Academic qualifications</p>
                     </div>
@@ -1331,7 +1514,8 @@ const UserForm = () => {
                         fieldName={`education-${index}-degreeTitle`} 
                         formData={formData} 
                         handleFieldVisibility={handleFieldVisibility}
-                        disabled={!editMode}
+                        disabled={!editMode || edu.isSaved}
+                        isEducationOrExperience={true}
                       >
                         <Select
                           name="degreeTitle"
@@ -1340,7 +1524,7 @@ const UserForm = () => {
                           onChange={(e) => handleDynamicChange("education", index, e)}
                           options={DEGREE_TITLES}
                           defaultOption="Select Degree"
-                          disabled={!editMode}
+                          disabled={!editMode || edu.isSaved}
                         />
                       </FieldWrapper>
 
@@ -1348,13 +1532,14 @@ const UserForm = () => {
                         fieldName={`education-${index}-startDate`} 
                         formData={formData} 
                         handleFieldVisibility={handleFieldVisibility}
-                        disabled={!editMode}
+                        disabled={!editMode || edu.isSaved}
+                        isEducationOrExperience={true}
                       >
                         <DateInput
                           label="Start Date"
                           value={edu.startDate}
                           onChange={(date) => handleDynamicDateChange("education", index, "startDate", date)}
-                          disabled={!editMode}
+                          disabled={!editMode || edu.isSaved}
                         />
                       </FieldWrapper>
 
@@ -1363,6 +1548,7 @@ const UserForm = () => {
                         formData={formData} 
                         handleFieldVisibility={handleFieldVisibility}
                         disabled={!editMode}
+                        isEducationOrExperience={true}
                       >
                         <DateInput
                           label="End Date"
@@ -1378,7 +1564,8 @@ const UserForm = () => {
                         fieldName={`education-${index}-institute`} 
                         formData={formData} 
                         handleFieldVisibility={handleFieldVisibility}
-                        disabled={!editMode}
+                        disabled={!editMode || edu.isSaved}
+                        isEducationOrExperience={true}
                       >
                         <Select
                           name="institute"
@@ -1388,7 +1575,7 @@ const UserForm = () => {
                           options={INSTITUTES}
                           defaultOption="Select Institute"
                           required
-                          disabled={!editMode}
+                          disabled={!editMode || edu.isSaved}
                         />
                       </FieldWrapper>
 
@@ -1397,6 +1584,7 @@ const UserForm = () => {
                         formData={formData} 
                         handleFieldVisibility={handleFieldVisibility}
                         disabled={!editMode}
+                        isEducationOrExperience={true}
                       >
                         <Input
                           name="website"
@@ -1411,16 +1599,17 @@ const UserForm = () => {
                         fieldName={`education-${index}-degreeFile`} 
                         formData={formData} 
                         handleFieldVisibility={handleFieldVisibility}
-                        disabled={!editMode}
+                        disabled={!editMode || edu.isSaved}
+                        isEducationOrExperience={true}
                       >
                         <FileUpload
                           label="Upload Degree (PDF/Image)"
                           onDrop={acceptedFiles => handleDynamicFileChange("education", index, { target: { files: acceptedFiles } })}
                           file={edu.degreeFile}
                           className="col-span-2"
-                          disabled={!editMode}
+                          disabled={!editMode || edu.isSaved}
                         />
-                        {edu.degreeFile && editMode && (
+                        {edu.degreeFile && editMode && !edu.isSaved && (
                           <button
                             type="button"
                             onClick={() => handleDynamicFileChange("education", index, { target: { files: [] } })}
@@ -1439,16 +1628,33 @@ const UserForm = () => {
               ))}
 
               {editMode && (
-                <button
-                  type="button"
-                  onClick={() => addNewEntry("education")}
-                  className="w-full py-2 px-3 bg-white text-[#f4793d] rounded hover:bg-blue-50 text-xs font-medium border border-dashed border-gray-200 flex items-center justify-center gap-1 hover:border-[#f4793d]"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                  </svg>
-                  Add Education
-                </button>
+                <div className="flex flex-col md:flex-row gap-3">
+                  <button
+                    type="button"
+                    onClick={() => addNewEntry("education")}
+                    className="w-full py-2 px-3 bg-white text-[#f4793d] rounded hover:bg-blue-50 text-xs font-medium border border-dashed border-gray-200 flex items-center justify-center gap-1 hover:border-[#f4793d]"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                    Add Education
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSaveEducation}
+                    disabled={isSubmitting || educationSaved}
+                    className={`w-full py-2 px-3 text-xs font-medium flex items-center justify-center gap-1 ${
+                      educationSaved 
+                        ? 'bg-green-100 text-green-800 cursor-not-allowed'
+                        : 'bg-[#f4793d] text-white hover:bg-[#e66e33]'
+                    }`}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    {educationSaved ? 'Education Saved' : 'Save Education'}
+                  </button>
+                </div>
               )}
             </div>
           </Section>
@@ -1471,6 +1677,11 @@ const UserForm = () => {
                     <div>
                       <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-1">
                         <span>Experience {index + 1}</span>
+                        {exp.isSaved && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                            Saved
+                          </span>
+                        )}
                       </h3>
                       <p className="text-gray-500 text-xxs">Work experience</p>
                     </div>
@@ -1494,7 +1705,8 @@ const UserForm = () => {
                         fieldName={`experience-${index}-jobTitle`} 
                         formData={formData} 
                         handleFieldVisibility={handleFieldVisibility}
-                        disabled={!editMode}
+                        disabled={!editMode || exp.isSaved}
+                        isEducationOrExperience={true}
                       >
                         <Select
                           name="jobTitle"
@@ -1503,7 +1715,7 @@ const UserForm = () => {
                           onChange={(e) => handleDynamicChange("experience", index, e)}
                           options={JOB_TITLES}
                           defaultOption="Select Job Title"
-                          disabled={!editMode}
+                          disabled={!editMode || exp.isSaved}
                         />
                       </FieldWrapper>
 
@@ -1511,13 +1723,14 @@ const UserForm = () => {
                         fieldName={`experience-${index}-startDate`} 
                         formData={formData} 
                         handleFieldVisibility={handleFieldVisibility}
-                        disabled={!editMode}
+                        disabled={!editMode || exp.isSaved}
+                        isEducationOrExperience={true}
                       >
                         <DateInput
                           label="Start Date"
                           value={exp.startDate}
                           onChange={(date) => handleDynamicDateChange("experience", index, "startDate", date)}
-                          disabled={!editMode}
+                          disabled={!editMode || exp.isSaved}
                         />
                       </FieldWrapper>
 
@@ -1526,6 +1739,7 @@ const UserForm = () => {
                         formData={formData} 
                         handleFieldVisibility={handleFieldVisibility}
                         disabled={!editMode}
+                        isEducationOrExperience={true}
                       >
                         <DateInput
                           label="End Date"
@@ -1539,7 +1753,8 @@ const UserForm = () => {
                         fieldName={`experience-${index}-company`} 
                         formData={formData} 
                         handleFieldVisibility={handleFieldVisibility}
-                        disabled={!editMode}
+                        disabled={!editMode || exp.isSaved}
+                        isEducationOrExperience={true}
                       >
                         <Select
                           name="company"
@@ -1549,7 +1764,7 @@ const UserForm = () => {
                           options={COMPANIES}
                           defaultOption="Select Company"
                           required
-                          disabled={!editMode}
+                          disabled={!editMode || exp.isSaved}
                         />
                       </FieldWrapper>
                     </div>
@@ -1560,6 +1775,7 @@ const UserForm = () => {
                         formData={formData} 
                         handleFieldVisibility={handleFieldVisibility}
                         disabled={!editMode}
+                        isEducationOrExperience={true}
                       >
                         <Input
                           name="website"
@@ -1574,7 +1790,8 @@ const UserForm = () => {
                         fieldName={`experience-${index}-experienceFile`} 
                         formData={formData} 
                         handleFieldVisibility={handleFieldVisibility}
-                        disabled={!editMode}
+                        disabled={!editMode || exp.isSaved}
+                        isEducationOrExperience={true}
                       >
                         <FileUpload
                           label="Upload Experience Letter (PDF only)"
@@ -1582,7 +1799,7 @@ const UserForm = () => {
                           file={exp.experienceFile}
                           className="col-span-2"
                           accept="application/pdf"
-                          disabled={!editMode}
+                          disabled={!editMode || exp.isSaved}
                         />
                       </FieldWrapper>
 
@@ -1591,6 +1808,7 @@ const UserForm = () => {
                         formData={formData} 
                         handleFieldVisibility={handleFieldVisibility}
                         disabled={!editMode}
+                        isEducationOrExperience={true}
                       >
                         <CheckboxGroup
                           legend="Job Functions"
@@ -1605,7 +1823,8 @@ const UserForm = () => {
                         fieldName={`experience-${index}-industry`} 
                         formData={formData} 
                         handleFieldVisibility={handleFieldVisibility}
-                        disabled={!editMode}
+                        disabled={!editMode || exp.isSaved}
+                        isEducationOrExperience={true}
                       >
                         <Select
                           name="industry"
@@ -1614,7 +1833,7 @@ const UserForm = () => {
                           onChange={(e) => handleDynamicChange("experience", index, e)}
                           options={INDUSTRIES}
                           defaultOption="Select Industry"
-                          disabled={!editMode}
+                          disabled={!editMode || exp.isSaved}
                         />
                       </FieldWrapper>
                     </div>
@@ -1623,16 +1842,33 @@ const UserForm = () => {
               ))}
 
               {editMode && (
-                <button
-                  type="button"
-                  onClick={() => addNewEntry("experience")}
-                  className="w-full py-2 px-3 bg-white text-[#f4793d] rounded hover:bg-blue-50 text-xs font-medium border border-dashed border-gray-200 flex items-center justify-center gap-1 hover:border-[#f4793d]"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                  </svg>
-                  Add Experience
-                </button>
+                <div className="flex flex-col md:flex-row gap-3">
+                  <button
+                    type="button"
+                    onClick={() => addNewEntry("experience")}
+                    className="w-full py-2 px-3 bg-white text-[#f4793d] rounded hover:bg-blue-50 text-xs font-medium border border-dashed border-gray-200 flex items-center justify-center gap-1 hover:border-[#f4793d]"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                    Add Experience
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSaveExperience}
+                    disabled={isSubmitting || experienceSaved}
+                    className={`w-full py-2 px-3 text-xs font-medium flex items-center justify-center gap-1 ${
+                      experienceSaved 
+                        ? 'bg-green-100 text-green-800 cursor-not-allowed'
+                        : 'bg-[#f4793d] text-white hover:bg-[#e66e33]'
+                    }`}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    {experienceSaved ? 'Experience Saved' : 'Save Experience'}
+                  </button>
+                </div>
               )}
             </div>
           </Section>
@@ -1641,9 +1877,11 @@ const UserForm = () => {
             <div className="flex justify-center pt-4">
               <button
                 type="submit"
-                disabled={isSubmitting}
-                className={`px-6 py-2.5 bg-gradient-to-r from-[#f4793d] to-[#ff8748] text-white rounded hover:shadow transition-all text-sm font-semibold shadow flex items-center justify-center gap-1 ${
-                  isSubmitting ? 'opacity-75 cursor-not-allowed' : ''
+                disabled={isSubmitting || !educationSaved || !experienceSaved}
+                className={`px-6 py-2.5 text-white rounded hover:shadow transition-all text-sm font-semibold shadow flex items-center justify-center gap-1 ${
+                  isSubmitting || !educationSaved || !experienceSaved
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-[#f4793d] to-[#ff8748]'
                 }`}
               >
                 {isSubmitting ? (

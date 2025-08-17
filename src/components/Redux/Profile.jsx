@@ -22,13 +22,9 @@ export const fetchPublicProfiles = createAsyncThunk(
     try {
       const response = await axiosinstance.get('/profile', {
         params: {
-          loggedInUserId: loggedInUserId // This will now filter by company matching
+          loggedInUserId: loggedInUserId
         }
       });
-      
-      console.log('Fetched validatable profiles:', response.data.profiles);
-      console.log('User ID:', loggedInUserId);
-      
       return response.data;
     } catch (err) {
       return rejectWithValue(err.response?.data || err.message);
@@ -123,8 +119,7 @@ export const updateBadgeScores = createAsyncThunk(
           updated: response.data.data,
           validationErrors: response.data.errors || [],
           modifiedFields: response.data.modifiedFields || [],
-          skippedFields: response.data.skippedFields || [],
-          commonCompanies: response.data.commonCompanies || []
+          skippedFields: response.data.skippedFields || []
         };
       }
       return rejectWithValue({

@@ -1,8 +1,6 @@
-// ProfileValidatorApp.js
-'use client';
 import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchProfileById, updateBadgeScores, checkCanValidate, clearValidationErrors, resetValidationState } from './Redux/profile';
+import { clearSelectedProfile, fetchProfileById, updateBadgeScores } from './Redux/profile';
 
 const BadgeIcon = ({ badgeLevel = 'Black' }) => {
   const badgeImages = {
@@ -21,7 +19,7 @@ const BadgeIcon = ({ badgeLevel = 'Black' }) => {
   );
 };
 
-const RadioGroup = ({ name, value, onChange, disabled }) => (
+const RadioGroup = ({ name, value, onChange, isDisabled }) => (
   <div className="flex gap-4 items-center mt-1">
     <label className="text-sm text-gray-600 flex items-center gap-1">
       <input 
@@ -30,8 +28,8 @@ const RadioGroup = ({ name, value, onChange, disabled }) => (
         value="yes" 
         checked={value === 'yes'} 
         onChange={onChange} 
-        disabled={disabled}
-        className="mr-1"
+        disabled={isDisabled}
+        className={`mr-1 ${isDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
       />
       Yes
     </label>
@@ -42,49 +40,13 @@ const RadioGroup = ({ name, value, onChange, disabled }) => (
         value="no" 
         checked={value === 'no'} 
         onChange={onChange} 
-        disabled={disabled}
-        className="mr-1"
+        disabled={isDisabled}
+        className={`mr-1 ${isDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
       />
       No
     </label>
   </div>
 );
-
-const InfoField = ({ label, value, name, feedback, onFeedbackChange, isLocked, badgeLevel, visibility, canValidate, isEditing }) => {
-  const shouldShowField = visibility === 'Public';
-  const isDisabled = !isEditing || !canValidate;
-  
-  return (
-    <div className="py-3">
-      <div className="flex items-center gap-2">
-        <BadgeIcon badgeLevel={badgeLevel} />
-        <div className="w-full">
-          <label className="text-xs text-gray-500 font-medium uppercase tracking-wider block mb-1">{label}</label>
-          {shouldShowField ? (
-            <>
-              <input
-                type="text"
-                value={value || ''}
-                readOnly
-                className="w-full text-sm font-semibold text-gray-900 bg-gray-100 px-3 py-1.5 rounded border border-gray-300 focus:outline-none cursor-not-allowed"
-              />
-              {value && (
-                <RadioGroup
-                  name={name}
-                  value={feedback[name]}
-                  onChange={(e) => onFeedbackChange(name, e.target.value)}
-                  disabled={isDisabled}
-                />
-              )}
-            </>
-          ) : (
-            <div className="text-sm text-gray-500 italic">This field is private</div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-};
 
 const DocumentViewer = ({ fileUrl, onClose }) => {
   return (
@@ -134,7 +96,7 @@ const DocumentViewer = ({ fileUrl, onClose }) => {
   );
 };
 
-const SubmissionModal = ({ onClose, message, commonCompanies }) => (
+const SubmissionModal = ({ onClose, message }) => (
   <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50">
     <div className="bg-white rounded-lg p-6 max-w-md w-full text-center">
       <div className="mx-auto flex items-center justify-center h-10 w-10 rounded-full bg-green-100">
@@ -144,38 +106,11 @@ const SubmissionModal = ({ onClose, message, commonCompanies }) => (
       </div>
       <h3 className="text-lg font-semibold text-gray-900 mt-3">Validation Submitted</h3>
       <p className="text-sm text-gray-600 mt-2">{message || 'Thank you for your feedback.'}</p>
-      {commonCompanies && commonCompanies.length > 0 && (
-        <div className="mt-3 p-2 bg-blue-50 rounded">
-          <p className="text-xs text-blue-700">
-            Validated based on shared experience at: <strong>{commonCompanies.join(', ')}</strong>
-          </p>
-        </div>
-      )}
       <button 
         onClick={onClose} 
         className="mt-4 w-full bg-orange-600 text-white px-4 py-2 rounded-md hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500"
       >
         Close
-      </button>
-    </div>
-  </div>
-);
-
-const ValidationNotAllowedModal = ({ onClose, error }) => (
-  <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50">
-    <div className="bg-white rounded-lg p-6 max-w-md w-full text-center">
-      <div className="mx-auto flex items-center justify-center h-10 w-10 rounded-full bg-red-100">
-        <svg className="h-5 w-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-        </svg>
-      </div>
-      <h3 className="text-lg font-semibold text-gray-900 mt-3">Validation Not Allowed</h3>
-      <p className="text-sm text-gray-600 mt-2">{error}</p>
-      <button 
-        onClick={onBack}
-        className="mt-4 w-full bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
-      >
-        Go Back
       </button>
     </div>
   </div>
@@ -187,12 +122,7 @@ const ProfileValidatorApp = ({ id, onBack }) => {
     selectedProfile, 
     loading, 
     error, 
-    updatedProfile, 
-    canValidate, 
-    validationCheckLoading,
-    validationCheckError,
-    commonCompanies,
-    validationMessage
+    updatedProfile
   } = useSelector((state) => state.profile);
 
   const [validationError, setValidationError] = useState(null);
@@ -202,67 +132,75 @@ const ProfileValidatorApp = ({ id, onBack }) => {
   const [showDegree, setShowDegree] = useState({});
   const [isEditing, setIsEditing] = useState(false);
   const [showSubmissionModal, setShowSubmissionModal] = useState(false);
-  const [showValidationBlockedModal, setShowValidationBlockedModal] = useState(false);
   const [hasVoted, setHasVoted] = useState(false);
   const [validatedFields, setValidatedFields] = useState([]);
+  const [userProfileData, setUserProfileData] = useState(null);
 
   useEffect(() => {
-    if (id) {
-      dispatch(fetchProfileById(id));
+    const userData = JSON.parse(localStorage.getItem('userData'));
+    if (userData?.profileData) {
+      setUserProfileData(userData.profileData);
     }
-    return () => {
-      dispatch(resetValidationState());
-    };
-  }, [id, dispatch]);
+  }, []);
+
+// In the ProfileValidatorApp component, ensure you're using the latest profile data
+useEffect(() => {
+  if (!id) return;
+  
+  setValidationError(null);
+  setFeedback({});
+  setInitialFeedback({});
+  setShowLetter({});
+  setShowDegree({});
+  setIsEditing(false);
+  setShowSubmissionModal(false);
+  setHasVoted(false);
+  setValidatedFields([]);
+
+  dispatch(clearSelectedProfile());
+  dispatch(fetchProfileById(id));
+
+  return () => {
+    dispatch(clearSelectedProfile());
+  };
+}, [id, dispatch]);
+
+// Add this effect to update user profile data when it changes
+useEffect(() => {
+  const userData = JSON.parse(localStorage.getItem('userData'));
+  if (userData?.profileData) {
+    setUserProfileData(userData.profileData);
+  }
+}, [selectedProfile]); // Add selectedProfile as dependency
 
   useEffect(() => {
-    if (selectedProfile && id) {
-      const userId = localStorage.getItem('userId');
-      if (userId) {
-        dispatch(checkCanValidate({ profileId: id, userId }));
-      }
-    }
-  }, [selectedProfile, id, dispatch]);
+    if (!selectedProfile || !id) return;
+    
+    const voterId = localStorage.getItem('userId');
+    if (!voterId) return;
 
-  useEffect(() => {
-    if (selectedProfile) {
-      const voterId = localStorage.getItem('userId');
-      const votedFields = getVotedFields(selectedProfile, voterId);
+    const votedFields = getVotedFields(selectedProfile, voterId);
+    
+    if (votedFields.length > 0) {
+      const initialFeedbackState = {};
+      const validatedFieldsList = [];
       
-      if (votedFields.length > 0) {
-        setHasVoted(true);
-        const initialFeedback = {};
-        votedFields.forEach(field => {
-          initialFeedback[field.path] = field.voteValue;
-          setValidatedFields(prev => [...prev, field.path]);
-        });
-        setFeedback(initialFeedback);
-        setInitialFeedback(initialFeedback);
-      }
+      votedFields.forEach(field => {
+        initialFeedbackState[field.path] = field.voteValue;
+        validatedFieldsList.push(field.path);
+      });
+      
+      setFeedback(initialFeedbackState);
+      setInitialFeedback(initialFeedbackState);
+      setValidatedFields(validatedFieldsList);
+      setHasVoted(true);
     }
-  }, [selectedProfile]);
+  }, [selectedProfile, id]);
 
   const getVotedFields = (profile, voterId) => {
     if (!profile || !voterId) return [];
     
     const votedFields = [];
-    
-    const rootFields = [
-      'name', 'fatherName', 'gender', 'dob', 'cnic', 'profilePicture',
-      'mobile', 'email', 'address', 'city', 'country', 'nationality',
-      'residentStatus', 'maritalStatus', 'shiftPreferences', 'workAuthorization',
-      'resume'
-    ];
-    
-    rootFields.forEach(field => {
-      const votedBy = profile[`${field}VotedBy`];
-      if (votedBy && votedBy.map(String).includes(voterId)) {
-        votedFields.push({
-          path: `${field}BadgeScore`,
-          voteValue: 'yes'
-        });
-      }
-    });
     
     profile.education?.forEach((edu, eduIndex) => {
       const eduFields = [
@@ -300,8 +238,138 @@ const ProfileValidatorApp = ({ id, onBack }) => {
     return votedFields;
   };
 
+const canValidateField = (fieldType, fieldValue, index = null, profileData = null) => {
+  if (!userProfileData || !fieldValue) return false;
+  
+  switch(fieldType) {
+    case 'education-degreeTitle':
+      return userProfileData.education.some(
+        edu => edu.degreeTitle === fieldValue
+      );
+    case 'education-institute':
+      return userProfileData.education.some(
+        edu => edu.institute === fieldValue
+      );
+    case 'education-startDate':
+    case 'education-endDate':
+      // Validate dates only if institute matches
+      const edu = profileData?.education?.[index];
+      if (!edu) return false;
+      return userProfileData.education.some(
+        validatorEdu => validatorEdu.institute === edu.institute
+      );
+    case 'education-website':
+      return userProfileData.education.some(
+        edu => edu.website === fieldValue
+      );
+    case 'experience-company':
+      return userProfileData.experience.some(
+        exp => exp.company === fieldValue
+      );
+    case 'experience-industry':
+      return userProfileData.experience.some(
+        exp => exp.industry === fieldValue
+      );
+    case 'experience-jobTitle':
+      return userProfileData.experience.some(
+        exp => exp.jobTitle === fieldValue
+      );
+    case 'experience-startDate':
+    case 'experience-endDate':
+      // Validate dates only if company matches
+      const exp = profileData?.experience?.[index];
+      if (!exp) return false;
+      return userProfileData.experience.some(
+        validatorExp => validatorExp.company === exp.company
+      );
+    case 'experience-jobFunctions':
+      return userProfileData.experience.some(validatorExp => 
+        validatorExp.jobFunctions?.some(jf => 
+          fieldValue.includes(jf)
+        )
+      );
+    case 'experience-website':
+      return userProfileData.experience.some(
+        exp => exp.website === fieldValue
+      );
+    case 'education-degreeFile':
+      // Validate file if degree title matches
+      const eduForFile = profileData?.education?.[index];
+      if (!eduForFile) return false;
+      return userProfileData.education.some(
+        validatorEdu => validatorEdu.degreeTitle === eduForFile.degreeTitle
+      );
+    case 'experience-experienceFile':
+      // Validate file if job title matches
+      const expForFile = profileData?.experience?.[index];
+      if (!expForFile) return false;
+      return userProfileData.experience.some(
+        validatorExp => validatorExp.jobTitle === expForFile.jobTitle
+      );
+    default:
+      return false;
+  }
+};
+
+ const InfoField = ({
+  label,
+  value,
+  name,
+  feedback,
+  onFeedbackChange,
+  isLocked,
+  badgeLevel,
+  visibility,
+  isEditing,
+  fieldType,
+  fieldValue,
+  index,
+  profileData
+}) => {
+    const shouldShowField = visibility === 'Public';
+    const canValidate = canValidateField(fieldType, fieldValue, index, profileData);
+
+    const shouldShowRadio = canValidate && shouldShowField && value;
+    const isRadioDisabled = !shouldShowRadio || (!isEditing && isLocked);
+
+    return (
+      <div className="py-3">
+        <div className="flex items-center gap-2">
+          <BadgeIcon badgeLevel={badgeLevel} />
+          <div className="w-full">
+            <label className="text-xs text-gray-500 font-medium uppercase tracking-wider block mb-1">
+              {label}
+              {canValidate && (
+                <span className="ml-2 text-green-600 text-xs">(You can validate)</span>
+              )}
+            </label>
+            {shouldShowField ? (
+              <>
+                <input
+                  type="text"
+                  value={value || ''}
+                  readOnly
+                  className="w-full text-sm font-semibold text-gray-900 bg-gray-100 px-3 py-1.5 rounded border border-gray-300 focus:outline-none cursor-not-allowed"
+                />
+                {shouldShowRadio && (
+                  <RadioGroup
+                    name={name}
+                    value={feedback[name]}
+                    onChange={(e) => onFeedbackChange(name, e.target.value)}
+                    isDisabled={isRadioDisabled}
+                  />
+                )}
+              </>
+            ) : (
+              <div className="text-sm text-gray-500 italic">This field is private</div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const handleFeedbackChange = (key, value) => {
-    if (!isEditing || !canValidate) return;
     setFeedback((prev) => ({ ...prev, [key]: value }));
   };
 
@@ -321,11 +389,6 @@ const ProfileValidatorApp = ({ id, onBack }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setValidationError(null);
-
-    if (!canValidate) {
-      setShowValidationBlockedModal(true);
-      return;
-    }
 
     if (Object.keys(feedback).length === 0) {
       setValidationError("Please provide at least one validation before submitting.");
@@ -351,13 +414,13 @@ const ProfileValidatorApp = ({ id, onBack }) => {
       const newValidatedFields = Object.keys(feedback).filter(key => !validatedFields.includes(key));
       setValidatedFields(prev => [...prev, ...newValidatedFields]);
     } catch (error) {
+      console.error('Validation submission error:', error);
       setValidationError(error.message);
     }
   };
 
   const handleEdit = () => {
     setIsEditing(true);
-    dispatch(clearValidationErrors());
   };
 
   const handleCancelEdit = () => {
@@ -367,7 +430,7 @@ const ProfileValidatorApp = ({ id, onBack }) => {
 
   const toggleFile = (setter, index) => setter((prev) => ({ ...prev, [index]: !prev[index] }));
 
-  if (loading || validationCheckLoading) {
+  if (loading) {
     return (
       <div className="flex justify-center items-center min-h-screen text-gray-600 font-semibold text-lg">
         Loading profile...
@@ -388,33 +451,6 @@ const ProfileValidatorApp = ({ id, onBack }) => {
       <div className="flex justify-center items-center min-h-screen text-gray-600">
         Profile not found.
       </div>
-    );
-  }
-
-  if (validationCheckError && !canValidate) {
-    return (
-      <>
-        <ValidationNotAllowedModal 
-          onClose={onBack}
-          error={validationCheckError || validationMessage || "You cannot validate this profile."}
-        />
-        <div className="bg-orange-50 min-h-screen p-4 sm:p-6 lg:p-8">
-          <div className="flex justify-center items-center min-h-screen">
-            <div className="text-center">
-              <h2 className="text-xl font-semibold text-gray-800 mb-4">Validation Not Allowed</h2>
-              <p className="text-gray-600 mb-4">
-                {validationCheckError || "You can only validate profiles from colleagues who worked at the same companies as you."}
-              </p>
-              <button 
-                onClick={onBack}
-                className="bg-orange-600 text-white px-6 py-2 rounded-md hover:bg-orange-700"
-              >
-                Go Back
-              </button>
-            </div>
-          </div>
-        </div>
-      </>
     );
   }
 
@@ -558,6 +594,138 @@ const ProfileValidatorApp = ({ id, onBack }) => {
     },
   ];
 
+  const educationFields = (edu, index) => [
+    {
+      label: 'Degree Title',
+      value: edu.degreeTitle,
+      name: `edu-degreeTitle-${index}`,
+      badgeLevel: edu.degreeTitleBadge,
+      visibility: edu.degreeTitleVisibility,
+      fieldType: 'education-degreeTitle',
+      fieldValue: edu.degreeTitle
+    },
+    {
+      label: 'Institute',
+      value: edu.institute,
+      name: `edu-institute-${index}`,
+      badgeLevel: edu.instituteBadge,
+      visibility: edu.instituteVisibility,
+      fieldType: 'education-institute',
+      fieldValue: edu.institute
+    },
+    {
+      label: 'Start Date',
+      value: edu.startDate ? new Date(edu.startDate).toLocaleDateString() : '',
+      name: `edu-startDate-${index}`,
+      badgeLevel: edu.startDateBadge,
+      visibility: edu.startDateVisibility,
+      fieldType: 'education-startDate',
+      fieldValue: edu.startDate
+    },
+    {
+      label: 'End Date',
+      value: edu.endDate ? new Date(edu.endDate).toLocaleDateString() : '',
+      name: `edu-endDate-${index}`,
+      badgeLevel: edu.endDateBadge,
+      visibility: edu.endDateVisibility,
+      fieldType: 'education-endDate',
+      fieldValue: edu.endDate
+    },
+    {
+      label: 'Website',
+      value: edu.website,
+      name: `edu-website-${index}`,
+      badgeLevel: edu.websiteBadge,
+      visibility: edu.websiteVisibility,
+      fieldType: 'education-website',
+      fieldValue: edu.website
+    },
+    {
+      label: 'Degree File',
+      value: edu.degreeFile ? 'Uploaded' : '',
+      name: `edu-degreeFile-${index}`,
+      badgeLevel: edu.degreeFileBadge,
+      visibility: edu.degreeFileVisibility,
+      fieldType: 'education-degreeFile',
+      fieldValue: edu.degreeFile
+    }
+  ];
+
+  const experienceFields = (exp, index) => [
+    {
+      label: 'Job Title',
+      value: exp.jobTitle,
+      name: `exp-jobTitle-${index}`,
+      badgeLevel: exp.jobTitleBadge,
+      visibility: exp.jobTitleVisibility,
+      fieldType: 'experience-jobTitle',
+      fieldValue: exp.jobTitle
+    },
+    {
+      label: 'Company',
+      value: exp.company,
+      name: `exp-company-${index}`,
+      badgeLevel: exp.companyBadge,
+      visibility: exp.companyVisibility,
+      fieldType: 'experience-company',
+      fieldValue: exp.company
+    },
+    {
+      label: 'Start Date',
+      value: exp.startDate ? new Date(exp.startDate).toLocaleDateString() : '',
+      name: `exp-startDate-${index}`,
+      badgeLevel: exp.startDateBadge,
+      visibility: exp.startDateVisibility,
+      fieldType: 'experience-startDate',
+      fieldValue: exp.startDate
+    },
+    {
+      label: 'End Date',
+      value: exp.endDate ? new Date(exp.endDate).toLocaleDateString() : '',
+      name: `exp-endDate-${index}`,
+      badgeLevel: exp.endDateBadge,
+      visibility: exp.endDateVisibility,
+      fieldType: 'experience-endDate',
+      fieldValue: exp.endDate
+    },
+    {
+      label: 'Job Functions',
+      value: exp.jobFunctions?.join(', '),
+      name: `exp-jobFunctions-${index}`,
+      badgeLevel: exp.jobFunctionsBadge,
+      visibility: exp.jobFunctionsVisibility,
+      fieldType: 'experience-jobFunctions',
+      fieldValue: exp.jobFunctions
+    },
+    {
+      label: 'Industry',
+      value: exp.industry,
+      name: `exp-industry-${index}`,
+      badgeLevel: exp.industryBadge,
+      visibility: exp.industryVisibility,
+      fieldType: 'experience-industry',
+      fieldValue: exp.industry
+    },
+    {
+      label: 'Website',
+      value: exp.website,
+      name: `exp-website-${index}`,
+      badgeLevel: exp.websiteBadge,
+      visibility: exp.websiteVisibility,
+      fieldType: 'experience-website',
+      fieldValue: exp.website
+    },
+    {
+      label: 'Experience File',
+      value: exp.experienceFile ? 'Uploaded' : '',
+      name: `exp-experienceFile-${index}`,
+      badgeLevel: exp.experienceFileBadge,
+      visibility: exp.experienceFileVisibility,
+      fieldType: 'experience-experienceFile',
+      fieldValue: exp.experienceFile
+    }
+  ];
+
   const filterFields = (fields) => fields.filter(field => field.value !== undefined && field.value !== null && field.value !== '');
 
   return (
@@ -566,13 +734,6 @@ const ProfileValidatorApp = ({ id, onBack }) => {
         <SubmissionModal 
           onClose={() => setShowSubmissionModal(false)} 
           message="Your validation has been submitted successfully"
-          commonCompanies={commonCompanies}
-        />
-      )}
-      {showValidationBlockedModal && (
-        <ValidationNotAllowedModal 
-          onClose={() => setShowValidationBlockedModal(false)}
-          error={validationCheckError || validationMessage || "You cannot validate this profile."}
         />
       )}
       
@@ -589,19 +750,6 @@ const ProfileValidatorApp = ({ id, onBack }) => {
           </button>
         </div>
 
-        {commonCompanies && commonCompanies.length > 0 && (
-          <div className="mb-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded max-w-4xl mx-auto">
-            <div className="flex items-center">
-              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <span className="font-medium">
-                Validation allowed - Shared companies: <strong>{commonCompanies.join(', ')}</strong>
-              </span>
-            </div>
-          </div>
-        )}
-        
         <form onSubmit={handleSubmit} className="bg-white rounded-lg max-w-4xl mx-auto p-6">
           <div className="flex items-center gap-4 mb-6">
             {currentProfile.profilePictureVisibility === 'Public' ? (
@@ -640,57 +788,78 @@ const ProfileValidatorApp = ({ id, onBack }) => {
               <div>
                 <h3 className="text-lg font-semibold text-orange-600 mb-4">Personal Information</h3>
                 {filterFields(personalFields).map((field) => (
-                  <InfoField
-                    key={field.key}
-                    label={field.label}
-                    value={field.value}
-                    name={field.key}
-                    feedback={feedback}
-                    onFeedbackChange={handleFeedbackChange}
-                    isLocked={validatedFields.includes(field.key)}
-                    badgeLevel={field.badgeLevel}
-                    visibility={field.visibility}
-                    canValidate={canValidate}
-                    isEditing={isEditing}
-                  />
+                  <div key={field.key} className="py-3">
+                    <div className="flex items-center gap-2">
+                      <BadgeIcon badgeLevel={field.badgeLevel} />
+                      <div className="w-full">
+                        <label className="text-xs text-gray-500 font-medium uppercase tracking-wider block mb-1">
+                          {field.label}
+                        </label>
+                        {field.visibility === 'Public' ? (
+                          <input
+                            type="text"
+                            value={field.value || ''}
+                            readOnly
+                            className="w-full text-sm font-semibold text-gray-900 bg-gray-100 px-3 py-1.5 rounded border border-gray-300 focus:outline-none cursor-not-allowed"
+                          />
+                        ) : (
+                          <div className="text-sm text-gray-500 italic">This field is private</div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 ))}
               </div>
 
               <div>
                 <h3 className="text-lg font-semibold text-orange-600 mb-4">Contact Information</h3>
                 {filterFields(contactFields).map((field) => (
-                  <InfoField
-                    key={field.key}
-                    label={field.label}
-                    value={field.value}
-                    name={field.key}
-                    feedback={feedback}
-                    onFeedbackChange={handleFeedbackChange}
-                    isLocked={validatedFields.includes(field.key)}
-                    badgeLevel={field.badgeLevel}
-                    visibility={field.visibility}
-                    canValidate={canValidate}
-                    isEditing={isEditing}
-                  />
+                  <div key={field.key} className="py-3">
+                    <div className="flex items-center gap-2">
+                      <BadgeIcon badgeLevel={field.badgeLevel} />
+                      <div className="w-full">
+                        <label className="text-xs text-gray-500 font-medium uppercase tracking-wider block mb-1">
+                          {field.label}
+                        </label>
+                        {field.visibility === 'Public' ? (
+                          <input
+                            type="text"
+                            value={field.value || ''}
+                            readOnly
+                            className="w-full text-sm font-semibold text-gray-900 bg-gray-100 px-3 py-1.5 rounded border border-gray-300 focus:outline-none cursor-not-allowed"
+                          />
+                        ) : (
+                          <div className="text-sm text-gray-500 italic">This field is private</div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 ))}
               </div>
 
               <div>
                 <h3 className="text-lg font-semibold text-orange-600 mb-4">Other Information</h3>
                 {filterFields(otherFields).map((field) => (
-                  <InfoField
-                    key={field.key}
-                    label={field.label}
-                    value={field.value}
-                    name={field.key}
-                    feedback={feedback}
-                    onFeedbackChange={handleFeedbackChange}
-                    isLocked={validatedFields.includes(field.key)}
-                    badgeLevel={field.badgeLevel}
-                    visibility={field.visibility}
-                    canValidate={canValidate}
-                    isEditing={isEditing}
-                  />
+                  <div key={field.key} className="py-3">
+                    <div className="flex items-center gap-2">
+                      <BadgeIcon badgeLevel={field.badgeLevel} />
+                      <div className="w-full">
+                        <label className="text-xs text-gray-500 font-medium uppercase tracking-wider block mb-1">
+                          {field.label}
+                        </label>
+                        {field.visibility === 'Public' ? (
+                          <input
+                            type="text"
+                            value={field.value || ''}
+                            readOnly
+                            className="w-full text-sm font-semibold text-gray-900 bg-gray-100 px-3 py-1.5 rounded border border-gray-300 focus:outline-none cursor-not-allowed"
+                          />
+                        ) : (
+                          <div className="text-sm text-gray-500 italic">This field is private</div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 ))}
               </div>
             </div>
@@ -700,30 +869,22 @@ const ProfileValidatorApp = ({ id, onBack }) => {
                 <h3 className="text-lg font-semibold text-orange-600">Experience</h3>
                 {currentProfile.experience?.map((exp, i) => (
                   <div key={i} className="mt-4 border-b pb-4">
-                    <InfoField
-                      label="Job Title"
-                      value={exp.jobTitle}
-                      name={`exp-jobTitle-${i}`}
-                      feedback={feedback}
-                      onFeedbackChange={handleFeedbackChange}
-                      isLocked={validatedFields.includes(`exp-jobTitle-${i}`)}
-                      badgeLevel={getNestedBadge('experience', i, 'jobTitle')}
-                      visibility={getNestedVisibility('experience', i, 'jobTitle')}
-                      canValidate={canValidate}
-                      isEditing={isEditing}
-                    />
-                    <InfoField
-                      label="Company"
-                      value={exp.company}
-                      name={`exp-company-${i}`}
-                      feedback={feedback}
-                      onFeedbackChange={handleFeedbackChange}
-                      isLocked={validatedFields.includes(`exp-company-${i}`)}
-                      badgeLevel={getNestedBadge('experience', i, 'company')}
-                      visibility={getNestedVisibility('experience', i, 'company')}
-                      canValidate={canValidate}
-                      isEditing={isEditing}
-                    />
+                    {filterFields(experienceFields(exp, i)).map((field) => (
+                      <InfoField
+                        key={field.name}
+                        label={field.label}
+                        value={field.value}
+                        name={field.name}
+                        feedback={feedback}
+                        onFeedbackChange={handleFeedbackChange}
+                        isLocked={validatedFields.includes(field.name) && !isEditing}
+                        badgeLevel={field.badgeLevel}
+                        visibility={field.visibility}
+                        isEditing={isEditing}
+                        fieldType={field.fieldType}
+                        fieldValue={field.fieldValue}
+                      />
+                    ))}
                     {exp.experienceFile && getNestedVisibility('experience', i, 'experienceFile') === 'Public' && (
                       <div className="mt-3">
                         <button
@@ -752,18 +913,22 @@ const ProfileValidatorApp = ({ id, onBack }) => {
                 <h3 className="text-lg font-semibold text-orange-600">Education</h3>
                 {currentProfile.education?.map((edu, i) => (
                   <div key={i} className="mt-4 border-b pb-4">
-                    <InfoField
-                      label="Degree"
-                      value={edu.degreeTitle}
-                      name={`edu-degreeTitle-${i}`}
-                      feedback={feedback}
-                      onFeedbackChange={handleFeedbackChange}
-                      isLocked={validatedFields.includes(`edu-degreeTitle-${i}`)}
-                      badgeLevel={getNestedBadge('education', i, 'degreeTitle')}
-                      visibility={getNestedVisibility('education', i, 'degreeTitle')}
-                      canValidate={canValidate}
-                      isEditing={isEditing}
-                    />
+                    {filterFields(educationFields(edu, i)).map((field) => (
+                      <InfoField
+                        key={field.name}
+                        label={field.label}
+                        value={field.value}
+                        name={field.name}
+                        feedback={feedback}
+                        onFeedbackChange={handleFeedbackChange}
+                        isLocked={validatedFields.includes(field.name) && !isEditing}
+                        badgeLevel={field.badgeLevel}
+                        visibility={field.visibility}
+                        isEditing={isEditing}
+                        fieldType={field.fieldType}
+                        fieldValue={field.fieldValue}
+                      />
+                    ))}
                     {edu.degreeFile && getNestedVisibility('education', i, 'degreeFile') === 'Public' && (
                       <div className="mt-3">
                         <button
@@ -813,26 +978,12 @@ const ProfileValidatorApp = ({ id, onBack }) => {
             
             <button
               type="submit"
-              disabled={(!isEditing && hasVoted) || (!hasNewValidations() && isEditing) || !canValidate}
+              disabled={(!isEditing && hasVoted) || (!hasNewValidations() && isEditing)}
               className="bg-orange-600 text-white px-6 py-2 rounded-md hover:bg-orange-700 transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
-              {!canValidate ? 'Validation Not Allowed' : 
-               hasVoted ? (isEditing ? 'Save Changes' : 'Validation Submitted') : 'Submit Validation'}
+              {hasVoted ? (isEditing ? 'Save Changes' : 'Validation Submitted') : 'Submit Validation'}
             </button>
           </div>
-
-          {!canValidate && (
-            <div className="mt-4 p-3 bg-yellow-100 border border-yellow-400 text-yellow-700 rounded">
-              <div className="flex items-center">
-                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.084 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                </svg>
-                <span className="font-medium">
-                  You can only validate profiles from colleagues who worked at the same companies as you.
-                </span>
-              </div>
-            </div>
-          )}
         </form>
       </main>
     </>

@@ -1,5 +1,3 @@
-// Task.js
-'use client';
 import React, { useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { Search } from 'lucide-react';
@@ -52,7 +50,7 @@ const Task = () => {
       shiftPreferences: new Set()
     };
 
-    // Add predefined options
+    // Predefined options
     const DEGREE_TITLES = ["Bachelor of Science", "Bachelor of Arts", "Master of Science", "Master of Arts", "PhD", "Associate Degree", "Diploma", "Other"];
     const JOB_TITLES = ["Software Engineer", "Data Analyst", "Project Manager", "Marketing Specialist", "Sales Executive", "HR Manager", "Accountant", "Operations Manager", "Other"];
     const COMPANIES = ["Systems Limited", "Techlogix", "ArhamSoft", "10Pearls", "Contour Software", "Netsol", "Avanza Solutions", "Other"];

@@ -16,16 +16,25 @@ const fromhandler = async (e) => {
   try {
     const response = await dispatch(loginuserform(data));
     
-    if (response.payload?.success) {
-      const { role } = response.payload.user;
+   if (response?.payload?.success) {
+        const { id, email, firstname, lastname, role, profileData } = response.payload.user;
 
-      // Redirect based on role
-      if (role === 'admin') {
-        navigate('/admin-dashboard');
-      } else {
-        navigate('/');
+        // Save user data in localStorage including profileData for validation
+        localStorage.setItem('isLoggedIn', 'true');
+        localStorage.setItem('userEmail', email);
+        localStorage.setItem('userName', `${firstname} ${lastname}`);
+        localStorage.setItem('userId', id);
+        localStorage.setItem('userData', JSON.stringify({
+          id, email, firstname, lastname, role, profileData
+        }));
+
+        // ✅ Redirect based on role
+        if (role === 'admin') {
+          navigate('/admin-dashboard');
+        } else {
+          navigate('/');
+        }
       }
-    }
   } catch (error) {
     // Error handling is done by the thunk
   }
