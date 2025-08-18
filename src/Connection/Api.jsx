@@ -4,7 +4,7 @@ const isProduction = window.location.hostname !== "localhost";
 
 const axiosinstance = axios.create({
   baseURL: isProduction 
-    ? "varidate-backend.railway.internal/api" 
+    ? "https://varidate-backend-production.up.railway.app/api" 
     : "http://localhost:3000/api",
   withCredentials: true,
   headers: {
